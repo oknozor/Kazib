@@ -1,7 +1,7 @@
 use annas_archive_api::{ItemDetails, SearchResult};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
-use views::{BookView, SearchView, SettingsView};
+use views::{Book, Search, Settings};
 
 pub use dioxus_fullstack::{WebSocketOptions, Websocket};
 
@@ -47,11 +47,11 @@ static CLIENT: Lazy<Arc<RwLock<AnnasArchiveClient>>> = Lazy::new(async move || {
 enum Route {
     #[layout(Navbar)]
     #[route("/")]
-    SearchView {},
+    Search{},
     #[route("/book/:md5")]
-    BookView { md5: String },
+    Book{ md5: String },
     #[route("/admin")]
-    SettingsView {},
+    Settings{},
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -349,16 +349,9 @@ fn App() -> Element {
 #[component]
 fn Navbar() -> Element {
     rsx! {
-        div {
-            id: "navbar",
-            Link {
-                to: Route::SearchView {},
-                "Home"
-            }
-            Link {
-                to: Route::SettingsView {},
-                "Settings"
-            }
+        div { id: "navbar",
+            Link { to: Route::Search {}, "Home" }
+            Link { to: Route::Settings {}, "Settings" }
         }
 
         Outlet::<Route> {}

@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use crate::{get_settings, save_settings, AppSettings};
 
 #[component]
-pub fn SettingsView() -> Element {
-    let mut api_key_input = use_signal(|| String::new());
-    let mut download_folder_input = use_signal(|| String::new());
-    let mut status_message = use_signal(|| String::new());
+pub fn Settings() -> Element {
+    let mut api_key_input = use_signal(String::new);
+    let mut download_folder_input = use_signal(String::new);
+    let mut status_message = use_signal(String::new);
     let mut is_loading = use_signal(|| false);
 
     // Load current settings on mount
@@ -52,9 +52,7 @@ pub fn SettingsView() -> Element {
     };
 
     rsx! {
-        div {
-            id: "admin",
-            class: "admin-container",
+        div { id: "admin", class: "admin-container",
 
             h1 { "Settings" }
 
@@ -64,8 +62,7 @@ pub fn SettingsView() -> Element {
                     handle_save_settings(());
                 },
 
-                div {
-                    class: "settings-section",
+                div { class: "settings-section",
 
                     h2 { "Anna's Archive API Key" }
                     p { "Set your API key to access premium features (optional)" }
@@ -79,8 +76,7 @@ pub fn SettingsView() -> Element {
                     }
                 }
 
-                div {
-                    class: "settings-section",
+                div { class: "settings-section",
 
                     h2 { "Download Folder" }
                     p { "Set the default folder where downloaded books will be saved" }
@@ -94,12 +90,9 @@ pub fn SettingsView() -> Element {
                     }
                 }
 
-                div {
-                    class: "settings-actions",
+                div { class: "settings-actions",
 
-                    button {
-                        r#type: "submit",
-                        disabled: is_loading(),
+                    button { r#type: "submit", disabled: is_loading(),
                         if is_loading() {
                             "Saving..."
                         } else {
@@ -110,10 +103,7 @@ pub fn SettingsView() -> Element {
             }
 
             if !status_message().is_empty() {
-                div {
-                    class: "status-message",
-                    "{status_message}"
-                }
+                div { class: "status-message", "{status_message}" }
             }
         }
     }

@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use crate::get_book_details;
 
 #[component]
-pub fn BookView(md5: String) -> Element {
+pub fn Book(md5: String) -> Element {
     let book_details = use_resource(move || {
         let md5 = md5.clone();
         async move { get_book_details(md5).await }
@@ -16,15 +16,13 @@ pub fn BookView(md5: String) -> Element {
                 BookDetailsComponent { details }
             },
             Some(Err(ref err)) => rsx! {
-                div {
-                    class: "error-container",
+                div { class: "error-container",
                     h2 { "Error Loading Book Details" }
                     p { "{err}" }
                 }
             },
             None => rsx! {
-                div {
-                    class: "loading-container",
+                div { class: "loading-container",
                     p { "Loading book details..." }
                 }
             },
@@ -35,12 +33,10 @@ pub fn BookView(md5: String) -> Element {
 #[component]
 fn BookDetailsComponent(details: ItemDetails) -> Element {
     rsx! {
-        div {
-            class: "book-details-container",
+        div { class: "book-details-container",
 
             // Header with title and basic info
-            div {
-                class: "book-header",
+            div { class: "book-header",
 
                 if let Some(ref cover_url) = details.cover_url {
                     img {
@@ -50,56 +46,40 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
                     }
                 }
 
-                div {
-                    class: "book-header-info",
+                div { class: "book-header-info",
 
                     h1 { "{details.title}" }
 
                     if let Some(ref author) = details.author {
-                        p {
-                            class: "book-author",
+                        p { class: "book-author",
                             strong { "Author: " }
                             "{author}"
                         }
                     }
 
-                    div {
-                        class: "book-metadata",
+                    div { class: "book-metadata",
 
                         if let Some(ref format) = details.format {
-                            span {
-                                class: "metadata-item",
-                                "Format: {format}"
-                            }
+                            span { class: "metadata-item", "Format: {format}" }
                         }
 
                         if let Some(ref size) = details.size {
-                            span {
-                                class: "metadata-item",
-                                "Size: {size}"
-                            }
+                            span { class: "metadata-item", "Size: {size}" }
                         }
 
                         if let Some(ref language) = details.language {
-                            span {
-                                class: "metadata-item",
-                                "Language: {language}"
-                            }
+                            span { class: "metadata-item", "Language: {language}" }
                         }
 
                         if let Some(ref pages) = details.pages {
-                            span {
-                                class: "metadata-item",
-                                "Pages: {pages}"
-                            }
+                            span { class: "metadata-item", "Pages: {pages}" }
                         }
                     }
                 }
             }
 
             // Publication details
-            div {
-                class: "book-section",
+            div { class: "book-section",
 
                 h2 { "Publication Details" }
 
@@ -134,8 +114,7 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
             // Description
             if let Some(ref description) = details.description {
-                div {
-                    class: "book-section",
+                div { class: "book-section",
                     h2 { "Description" }
                     p { "{description}" }
                 }
@@ -143,8 +122,7 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
             // Identifiers
             if let Some(ref identifiers) = details.identifiers {
-                div {
-                    class: "book-section",
+                div { class: "book-section",
                     h2 { "Identifiers" }
 
                     IdentifiersComponent { identifiers: identifiers.clone() }
@@ -154,16 +132,11 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
             // Categories and Subjects
             if let Some(ref categories) = details.categories {
                 if !categories.is_empty() {
-                    div {
-                        class: "book-section",
+                    div { class: "book-section",
                         h2 { "Categories" }
-                        div {
-                            class: "tags",
+                        div { class: "tags",
                             for category in categories {
-                                span {
-                                    class: "tag",
-                                    "{category}"
-                                }
+                                span { class: "tag", "{category}" }
                             }
                         }
                     }
@@ -172,16 +145,11 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
             if let Some(ref subjects) = details.subjects {
                 if !subjects.is_empty() {
-                    div {
-                        class: "book-section",
+                    div { class: "book-section",
                         h2 { "Subjects" }
-                        div {
-                            class: "tags",
+                        div { class: "tags",
                             for subject in subjects {
-                                span {
-                                    class: "tag",
-                                    "{subject}"
-                                }
+                                span { class: "tag", "{subject}" }
                             }
                         }
                     }
@@ -189,8 +157,7 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
             }
 
             // Technical details
-            div {
-                class: "book-section",
+            div { class: "book-section",
                 h2 { "Technical Details" }
 
                 p {
@@ -226,8 +193,7 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 #[component]
 fn IdentifiersComponent(identifiers: Identifiers) -> Element {
     rsx! {
-        div {
-            class: "identifiers-grid",
+        div { class: "identifiers-grid",
 
             if let Some(ref isbn13) = identifiers.isbn13 {
                 for isbn in isbn13 {

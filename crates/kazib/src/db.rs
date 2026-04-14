@@ -54,7 +54,10 @@ pub fn delete_api_key(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn save_download_folder(db: &Database, folder_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_download_folder(
+    db: &Database,
+    folder_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(SETTINGS_TABLE)?;
