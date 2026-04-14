@@ -1,5 +1,4 @@
-FROM rust:1 AS chef
-RUN cargo install cargo-chef
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -11,9 +10,8 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-RUN cargo binstall dioxus-cli --version 0.7.4 --root /.cargo -y --force
-ENV PATH="/.cargo/bin:$PATH"
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash && \
+    /usr/local/cargo/bin/cargo-binstall dioxus-cli --version 0.7.4 --no-confirm
 
 RUN dx bundle --package kazib --web --release
 
