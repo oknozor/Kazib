@@ -1,6 +1,4 @@
 use reqwest::Client;
-
-#[cfg(feature = "server")]
 use {reqwest::cookie::Jar, std::sync::Arc};
 
 use crate::error::Error;
@@ -13,7 +11,6 @@ pub struct AnnasArchiveClient {
     client: Client,
     api_key: Option<String>,
     #[allow(dead_code)] // Used by cookie_provider, but not directly accessed
-    #[cfg(feature = "server")]
     cookie_jar: Arc<Jar>,
     domains: Vec<String>,
     authenticated: std::sync::atomic::AtomicBool,
@@ -21,37 +18,19 @@ pub struct AnnasArchiveClient {
 
 impl AnnasArchiveClient {
     pub fn new(domain: String, api_key: Option<String>) -> Self {
-        #[cfg(feature = "server")]
-        {
-            let cookie_jar = Arc::new(Jar::default());
-            let client = Client::builder()
-                .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-                .cookie_provider(cookie_jar.clone())
-                .build()
-                .expect("Failed to create HTTP client");
+        let cookie_jar = Arc::new(Jar::default());
+        let client = Client::builder()
+            .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            .cookie_provider(cookie_jar.clone())
+            .build()
+            .expect("Failed to create HTTP client");
 
-            return Self {
-                client,
-                api_key,
-                cookie_jar,
-                authenticated: std::sync::atomic::AtomicBool::new(false),
-                domains: vec![domain],
-            };
-        }
-
-        #[cfg(not(feature = "server"))]
-        {
-            let client = Client::builder()
-                .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-                .build()
-                .expect("Failed to create HTTP client");
-
-            Self {
-                client,
-                api_key,
-                authenticated: std::sync::atomic::AtomicBool::new(false),
-                domains: vec![domain],
-            }
+        Self {
+            client,
+            api_key,
+            cookie_jar,
+            authenticated: std::sync::atomic::AtomicBool::new(false),
+            domains: vec![domain],
         }
     }
 
@@ -95,7 +74,6 @@ impl AnnasArchiveClient {
         })
     }
 
-    #[cfg(feature = "server")]
     async fn ensure_authenticated(&self) -> Result<(), Error> {
         if !self.authenticated.load(std::sync::atomic::Ordering::SeqCst) {
             self.authenticate().await?;
@@ -156,7 +134,6 @@ impl AnnasArchiveClient {
 
     /// Get detailed metadata for an item. Requires API key (secret key).
     pub async fn get_details(&self, md5: &str) -> Result<ItemDetails, Error> {
-        #[cfg(feature = "server")]
         self.ensure_authenticated().await?;
 
         let path = format!("/db/aarecord_elasticsearch/md5:{md5}.json");
