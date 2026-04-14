@@ -1,18 +1,13 @@
+use crate::path_template::{PathTemplate, TemplateResult};
+use crate::AppSettings;
+use annas_archive_api::ItemDetails;
+use redb::{Database, TableDefinition};
 use std::collections::HashMap;
 use std::fs;
-use redb::{Database, TableDefinition};
 use std::path::{Path, PathBuf};
-use annas_archive_api::ItemDetails;
-use crate::AppSettings;
-use crate::path_template::{PathTemplate, TemplateResult};
-
-const API_KEY_TABLE: TableDefinition<&str, &str> = TableDefinition::new("api_keys");
-const API_KEY_NAME: &str = "annas_archive";
 
 const SETTINGS_TABLE: TableDefinition<&str, &str> = TableDefinition::new("settings");
 const SETTINGS_KEY: &str = "settings";
-
-const DOWNLOAD_PATH_TEMPLATE_KEY: &str = "download_path_template";
 
 pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
     std::fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(".")))?;
@@ -20,7 +15,6 @@ pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
 
     let write_txn = db.begin_write()?;
     {
-        let _ = write_txn.open_table(API_KEY_TABLE);
         let _ = write_txn.open_table(SETTINGS_TABLE);
     }
     write_txn.commit()?;
@@ -49,7 +43,7 @@ impl AppSettings {
             let settings = serde_json::from_str::<AppSettings>(value)?;
             Ok(settings)
         } else {
-            unreachable!("replace me with proper error handling");
+            Ok(AppSettings::default())
         }
     }
 
@@ -83,7 +77,7 @@ impl AppSettings {
         };
 
         let path = PathBuf::from(path);
-        
+
         if !path.exists() {
             fs::create_dir_all(&path)?;
         }

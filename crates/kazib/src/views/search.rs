@@ -1,7 +1,7 @@
 use annas_archive_api::{Lang, SearchResult};
 use dioxus::prelude::*;
 
-use crate::{download_book, DownloadProgress, Route, WebSocketOptions, Websocket, CLIENT};
+use crate::{download_book, DownloadProgress, Route, WebSocketOptions, Websocket};
 
 #[component]
 pub fn Search() -> Element {
@@ -80,20 +80,16 @@ pub fn SearchInputComponent(
 #[component]
 pub fn SearchResultComponent(result: SearchResult) -> Element {
     let md5 = result.md5.clone();
-    let title = result.title.clone();
     let mut download_state = use_signal(|| None::<DownloadProgress>);
     let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
 
     let handle_download = move |e: Event<MouseData>| {
         e.stop_propagation();
         let md5 = md5.clone();
-        let title = title.clone();
 
         // Connect to websocket and start download
         spawn(async move {
-            let client = CLIENT.read().unwrap();
-            let details = client.get_details(&md5).await.unwrap();
-            if let Ok(socket) = download_book(details, WebSocketOptions::new()).await {
+            if let Ok(socket) = download_book(md5, WebSocketOptions::new()).await {
                 ws_socket.set(Some(socket));
 
                 // Listen for progress updates

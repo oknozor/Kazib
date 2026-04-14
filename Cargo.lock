@@ -2861,6 +2861,7 @@ version = "0.1.0"
 dependencies = [
  "annas-archive-api",
  "dioxus",
+ "dirs",
  "futures-util",
  "nom",
  "redb",

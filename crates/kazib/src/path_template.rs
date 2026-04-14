@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 /// Template AST node types
 #[derive(Debug, Clone)]
-pub enum TemplateNode {
+enum TemplateNode {
     Literal(String),
     Variable {
         name: String,
@@ -42,16 +42,6 @@ pub enum TemplateResult {
 pub struct PathTemplate;
 
 impl PathTemplate {
-    /// Parse a template string into AST nodes
-    pub fn parse(input: &str) -> Result<Vec<TemplateNode>, String> {
-        match Self::parse_template(input) {
-            Ok(("", nodes)) => Ok(nodes),
-            Ok((remaining, _)) => Err(format!("Unparsed input: '{}'", remaining)),
-            Err(e) => Err(format!("Parse error: {:?}", e)),
-        }
-    }
-
-    /// Resolve template to a path or identify missing fields
     pub fn resolve(template: &str, metadata: &HashMap<String, String>) -> TemplateResult {
         match Self::parse(template) {
             Ok(nodes) => Self::resolve_nodes(&nodes, metadata),
@@ -62,7 +52,13 @@ impl PathTemplate {
         }
     }
 
-    // === Parser Combinators ===
+    fn parse(input: &str) -> Result<Vec<TemplateNode>, String> {
+        match Self::parse_template(input) {
+            Ok(("", nodes)) => Ok(nodes),
+            Ok((remaining, _)) => Err(format!("Unparsed input: '{}'", remaining)),
+            Err(e) => Err(format!("Parse error: {:?}", e)),
+        }
+    }
 
     fn parse_template(input: &str) -> IResult<&str, Vec<TemplateNode>> {
         many0(|i| Self::parse_node(i)).parse(input)

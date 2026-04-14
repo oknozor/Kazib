@@ -95,6 +95,7 @@ impl AnnasArchiveClient {
         })
     }
 
+    #[cfg(feature = "server")]
     async fn ensure_authenticated(&self) -> Result<(), Error> {
         if !self.authenticated.load(std::sync::atomic::Ordering::SeqCst) {
             self.authenticate().await?;
@@ -156,7 +157,6 @@ impl AnnasArchiveClient {
     /// Get detailed metadata for an item. Requires API key (secret key).
     pub async fn get_details(&self, md5: &str) -> Result<ItemDetails, Error> {
         #[cfg(feature = "server")]
-        println!("{:?}", self.cookie_jar);
         self.ensure_authenticated().await?;
 
         let path = format!("/db/aarecord_elasticsearch/md5:{md5}.json");

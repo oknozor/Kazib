@@ -29,7 +29,11 @@ pub fn Settings() -> Element {
     let mut handle_save_settings = move |_| {
         let api_key = api_key_input();
         let settings = AppSettings {
-            api_key: if api_key.is_empty() { None } else { Some(api_key) },
+            api_key: if api_key.is_empty() {
+                None
+            } else {
+                Some(api_key)
+            },
             download_path_template: download_folder_input(),
         };
 

@@ -1,4 +1,3 @@
-use dioxus::fullstack::{Json, Query};
 use annas_archive_api::{ItemDetails, SearchResult};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -18,12 +17,13 @@ use {
     },
     tokio::{fs::File, io::AsyncWriteExt},
 };
-use crate::path_template::PathTemplate;
 
 #[cfg(feature = "server")]
 mod db;
 
+#[cfg(feature = "server")]
 mod path_template;
+
 mod views;
 
 #[cfg(feature = "server")]
@@ -101,6 +101,23 @@ pub struct AppSettings {
     pub download_path_template: String,
 }
 
+impl Default for AppSettings {
+    fn default() -> Self {
+        let download_path_template = dirs::download_dir()
+            .or(dirs::document_dir())
+            .or(dirs::data_dir())
+            .expect("failed to get default download location");
+
+        let download_path_template = download_path_template.join("Kazib");
+        let download_path_template = download_path_template.to_string_lossy().into_owned();
+
+        Self {
+            api_key: None,
+            download_path_template,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub enum DownloadProgress {
     Started {
@@ -143,11 +160,14 @@ async fn get_settings() -> Result<AppSettings> {
     AppSettings::get(&db).map_err(CapturedError::from_display)
 }
 
-#[get("/api/download-book")]
+#[get("/api/download-book?md5")]
 async fn download_book(
-    item_details: ItemDetails,
+    md5: String,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
+    let client = CLIENT.read().unwrap();
+    let item_details = client.get_details(&md5).await.unwrap();
+
     Ok(options.on_upgrade(move |mut socket| async move {
         let md5 = item_details.md5.clone();
         let title = item_details.title.clone();
@@ -160,7 +180,16 @@ async fn download_book(
             .await;
 
         let db = DATABASE.clone();
-        let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+        let Ok(settings) = AppSettings::get(&db) else {
+            let _ = socket
+                .send(DownloadProgress::Error {
+                    md5: md5.clone(),
+                    error: "Download folder not configured".to_string(),
+                })
+                .await;
+            return;
+        };
+
         let download_folder = match settings.download_path(&item_details) {
             Ok(folder) => folder,
             _ => {
