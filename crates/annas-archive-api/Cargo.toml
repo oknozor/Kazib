@@ -1,0 +1,21 @@
+[package]
+name = "annas-archive-api"
+version = "0.2.0"
+edition = "2024"
+description = "Rust client library for Anna's Archive - search and retrieve books, papers, and documents"
+license = "MIT"
+repository = "https://github.com/RemiKalbe/annas-archive-mcp"
+keywords = ["annas-archive", "books", "library", "api"]
+categories = ["api-bindings"]
+
+[dependencies]
+reqwest = { version = "0.13.1", features = ["json", "cookies", "form"] }
+scraper = "0.25.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1.0", features = ["rt", "macros"] }
+urlencoding = "2.1"
+
+[features]
+server = []

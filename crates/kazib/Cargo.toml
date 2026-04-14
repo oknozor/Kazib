@@ -1,0 +1,23 @@
+[package]
+name = "kazib"
+version = "0.1.0"
+authors = ["Paul Delafosse <paul.delafosse@protonmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dioxus = { version = "0.7.4", features = ["router", "fullstack"] }
+annas-archive-api = { path = "../annas-archive-api" }
+redb = "2.3"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["fs", "io-util"], optional = true }
+futures-util = { version = "0.3", optional = true }
+reqwest = { version = "0.13", features = ["stream"], optional = true }
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+server = ["dioxus/server", "annas-archive-api/server", "dep:tokio", "dep:futures-util", "dep:reqwest"]
