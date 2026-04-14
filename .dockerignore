@@ -1,0 +1,7 @@
+target/
+**/dist
+LICENSES
+LICENSE
+data/
+temp
+README.md
