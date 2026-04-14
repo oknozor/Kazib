@@ -34,7 +34,7 @@ pub struct MissingField {
 /// Result of template resolution
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub enum TemplateResult {
-    Path(String),
+    Path { directory: String, filename: String },
     MissingFields(Vec<MissingField>),
 }
 
@@ -179,7 +179,13 @@ impl PathTemplate {
             return TemplateResult::MissingFields(missing);
         }
 
-        TemplateResult::Path(Self::clean_path(&result))
+        let cleaned_path = Self::clean_path(&result);
+        let (directory, filename) = Self::split_path(&cleaned_path);
+
+        TemplateResult::Path {
+            directory: directory.to_string(),
+            filename: filename.to_string(),
+        }
     }
 
     fn resolve_node(
@@ -255,6 +261,23 @@ impl PathTemplate {
             .trim_end_matches('\\')
             .to_string()
     }
+
+    fn split_path(path: &str) -> (&str, &str) {
+        // Find the last separator (/ or \)
+        let last_sep_pos = path.rfind(|c| c == '/' || c == '\\');
+
+        match last_sep_pos {
+            Some(pos) => {
+                let directory = &path[..pos];
+                let filename = &path[pos + 1..];
+                (directory, filename)
+            }
+            None => {
+                // No separator found, the entire path is the filename
+                ("", path)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -270,11 +293,20 @@ mod tests {
 
     fn assert_path(template: &str, metadata: &HashMap<String, String>, expected: &str) {
         let result = PathTemplate::resolve(template, metadata);
-        let TemplateResult::Path(path) = result else {
+        let TemplateResult::Path {
+            directory,
+            filename,
+        } = result
+        else {
             panic!("Expected a path, got {:?}", result);
         };
 
-        assert_eq!(path, expected);
+        let full_path = if directory.is_empty() {
+            filename
+        } else {
+            format!("{}/{}", directory, filename)
+        };
+        assert_eq!(full_path, expected);
     }
 
     #[test]
@@ -315,7 +347,7 @@ mod tests {
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].variable, "ext");
             }
-            TemplateResult::Path(_) => panic!("Should identify missing field"),
+            TemplateResult::Path { .. } => panic!("Should identify missing field"),
         }
     }
 
@@ -444,7 +476,7 @@ mod tests {
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].variable, "author");
             }
-            TemplateResult::Path(_) => panic!("Empty string should be treated as missing"),
+            TemplateResult::Path { .. } => panic!("Empty string should be treated as missing"),
         }
     }
 
@@ -476,7 +508,7 @@ mod tests {
                 assert!(vars.contains(&"title"));
                 assert!(vars.contains(&"ext"));
             }
-            TemplateResult::Path(_) => panic!("Should identify all missing fields"),
+            TemplateResult::Path { .. } => panic!("Should identify all missing fields"),
         }
     }
 
@@ -592,8 +624,14 @@ mod tests {
             TemplateResult::MissingFields(fields) => {
                 assert!(fields.iter().any(|f| f.variable == "series_number"));
             }
-            TemplateResult::Path(path) => {
-                panic!("Should have missing series_number: {}", path);
+            TemplateResult::Path {
+                directory,
+                filename,
+            } => {
+                panic!(
+                    "Should have missing series_number: directory={}, filename={}",
+                    directory, filename
+                );
             }
         }
     }
@@ -604,9 +642,13 @@ mod tests {
         let metadata = create_metadata(&[("author", "Hobb"), ("title", "Book")]);
 
         match PathTemplate::resolve(template, &metadata) {
-            TemplateResult::Path(path) => {
-                assert!(path.contains("Hobb"));
-                assert!(path.contains("Book"));
+            TemplateResult::Path {
+                directory,
+                filename,
+            } => {
+                let full_path = format!("{}\\{}", directory, filename);
+                assert!(full_path.contains("Hobb"));
+                assert!(full_path.contains("Book"));
             }
             TemplateResult::MissingFields(_) => panic!("Should handle backslashes"),
         }
@@ -631,7 +673,7 @@ mod tests {
                 assert!(vars.contains(&"Author"));
                 assert!(vars.contains(&"Title"));
             }
-            TemplateResult::Path(_) => panic!("Should be case-sensitive"),
+            TemplateResult::Path { .. } => panic!("Should be case-sensitive"),
         }
     }
 }

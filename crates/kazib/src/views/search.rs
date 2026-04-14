@@ -84,8 +84,8 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
     let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
 
     let handle_download = move |e: Event<MouseData>| {
-        e.stop_propagation();
         let md5 = md5.clone();
+        e.stop_propagation();
 
         // Connect to websocket and start download
         spawn(async move {

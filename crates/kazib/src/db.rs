@@ -72,16 +72,19 @@ impl AppSettings {
             metadata.insert("year".into(), year.clone());
         };
 
-        let TemplateResult::Path(path) = PathTemplate::resolve(template, &metadata) else {
+        let TemplateResult::Path {
+            directory,
+            filename,
+        } = PathTemplate::resolve(template, &metadata)
+        else {
             panic!("No path template found + Please replace this panic with error handling");
         };
 
-        let path = PathBuf::from(path);
-
-        if !path.exists() {
-            fs::create_dir_all(&path)?;
+        let dir_path = PathBuf::from(&directory);
+        if !dir_path.exists() {
+            fs::create_dir_all(&dir_path)?;
         }
 
-        Ok(path)
+        Ok(dir_path)
     }
 }

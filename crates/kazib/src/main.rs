@@ -165,8 +165,10 @@ async fn download_book(
     md5: String,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
-    let client = CLIENT.read().unwrap();
-    let item_details = client.get_details(&md5).await.unwrap();
+    let item_details = {
+        let client = CLIENT.read().unwrap();
+        client.get_details(&md5).await.unwrap()
+    };
 
     Ok(options.on_upgrade(move |mut socket| async move {
         let md5 = item_details.md5.clone();

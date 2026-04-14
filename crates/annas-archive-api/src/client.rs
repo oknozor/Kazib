@@ -1,5 +1,7 @@
 use reqwest::Client;
-use {reqwest::cookie::Jar, std::sync::Arc};
+use reqwest::cookie::Jar;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::error::Error;
 use crate::scraper::parse_search_results;
