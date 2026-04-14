@@ -1,3 +1,4 @@
+use dioxus::fullstack::{Json, Query};
 use annas_archive_api::{ItemDetails, SearchResult};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -17,10 +18,12 @@ use {
     },
     tokio::{fs::File, io::AsyncWriteExt},
 };
+use crate::path_template::PathTemplate;
 
 #[cfg(feature = "server")]
 mod db;
 
+mod path_template;
 mod views;
 
 #[cfg(feature = "server")]
@@ -33,12 +36,10 @@ static DATABASE: Lazy<Arc<Database>> = Lazy::new(async move || {
 #[cfg(feature = "server")]
 static CLIENT: Lazy<Arc<RwLock<AnnasArchiveClient>>> = Lazy::new(async move || {
     let db = DATABASE.clone();
-
-    // Try to load API key from database
-    let api_key = db::load_api_key(&db).map_err(|e| CapturedError::from_display(e))?;
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
 
     Ok::<Arc<RwLock<AnnasArchiveClient>>, CapturedError>(Arc::new(RwLock::new(
-        AnnasArchiveClient::new("annas-archive.gl".to_string(), api_key),
+        AnnasArchiveClient::new("annas-archive.gl".to_string(), settings.api_key),
     )))
 });
 
@@ -96,8 +97,8 @@ async fn get_book_details(md5: String) -> Result<ItemDetails> {
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppSettings {
-    pub api_key: String,
-    pub download_folder: String,
+    pub api_key: Option<String>,
+    pub download_path_template: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
@@ -126,63 +127,31 @@ pub enum DownloadProgress {
 #[post("/save-settings")]
 async fn save_settings(settings: AppSettings) -> Result<()> {
     let db = DATABASE.clone();
+    settings.save(&db).map_err(CapturedError::from_display)?;
 
-    // Save API key if provided
-    if !settings.api_key.is_empty() {
-        db::save_api_key(&db, &settings.api_key).map_err(CapturedError::from_display)?;
-        // Update the client with the new API key
-        *CLIENT.write().unwrap() =
-            AnnasArchiveClient::new("annas-archive.gl".to_string(), Some(settings.api_key));
-    }
-
-    // Save download folder
-    if !settings.download_folder.is_empty() {
-        db::save_download_folder(&db, &settings.download_folder)
-            .map_err(CapturedError::from_display)?;
+    if settings.api_key.is_some() {
+        *CLIENT.write().expect("failed to acquire write lock") =
+            AnnasArchiveClient::new("annas-archive.gl".to_string(), settings.api_key);
     }
 
     Ok(())
 }
 
-#[server]
 #[get("/get-settings")]
 async fn get_settings() -> Result<AppSettings> {
     let db = DATABASE.clone();
-
-    let api_key = db::load_api_key(&db)
-        .map_err(CapturedError::from_display)?
-        .unwrap_or_default();
-
-    let download_folder = db::load_download_folder(&db)
-        .map_err(CapturedError::from_display)?
-        .unwrap_or_else(|| {
-            // Default download folder
-            #[cfg(target_os = "windows")]
-            let default = format!(
-                "{}\\Downloads",
-                std::env::var("USERPROFILE").unwrap_or_else(|_| "C:".to_string())
-            );
-            #[cfg(not(target_os = "windows"))]
-            let default = format!(
-                "{}/Downloads",
-                std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string())
-            );
-            default
-        });
-
-    Ok(AppSettings {
-        api_key,
-        download_folder,
-    })
+    AppSettings::get(&db).map_err(CapturedError::from_display)
 }
 
-#[get("/api/download-book?md5&title")]
+#[get("/api/download-book")]
 async fn download_book(
-    md5: String,
-    title: String,
+    item_details: ItemDetails,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
     Ok(options.on_upgrade(move |mut socket| async move {
+        let md5 = item_details.md5.clone();
+        let title = item_details.title.clone();
+
         let _ = socket
             .send(DownloadProgress::Started {
                 md5: md5.clone(),
@@ -191,8 +160,9 @@ async fn download_book(
             .await;
 
         let db = DATABASE.clone();
-        let download_folder = match db::load_download_folder(&db) {
-            Ok(Some(folder)) => folder,
+        let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+        let download_folder = match settings.download_path(&item_details) {
+            Ok(folder) => folder,
             _ => {
                 let _ = socket
                     .send(DownloadProgress::Error {

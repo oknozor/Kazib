@@ -1,11 +1,18 @@
+use std::collections::HashMap;
+use std::fs;
 use redb::{Database, TableDefinition};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use annas_archive_api::ItemDetails;
+use crate::AppSettings;
+use crate::path_template::{PathTemplate, TemplateResult};
 
 const API_KEY_TABLE: TableDefinition<&str, &str> = TableDefinition::new("api_keys");
 const API_KEY_NAME: &str = "annas_archive";
 
 const SETTINGS_TABLE: TableDefinition<&str, &str> = TableDefinition::new("settings");
-const DOWNLOAD_FOLDER_KEY: &str = "download_folder";
+const SETTINGS_KEY: &str = "settings";
+
+const DOWNLOAD_PATH_TEMPLATE_KEY: &str = "download_path_template";
 
 pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
     std::fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(".")))?;
@@ -21,60 +28,66 @@ pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
     Ok(db)
 }
 
-pub fn save_api_key(db: &Database, api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(API_KEY_TABLE)?;
-        table.insert(API_KEY_NAME, api_key)?;
+impl AppSettings {
+    pub fn save(&self, db: &Database) -> Result<(), Box<dyn std::error::Error>> {
+        let write_txn = db.begin_write()?;
+        {
+            let settings = serde_json::to_string(&self)?;
+            let mut table = write_txn.open_table(SETTINGS_TABLE)?;
+            table.insert(SETTINGS_KEY, settings.as_str())?;
+        }
+        write_txn.commit()?;
+        Ok(())
     }
-    write_txn.commit()?;
-    Ok(())
-}
 
-pub fn load_api_key(db: &Database) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(API_KEY_TABLE)?;
+    pub fn get(db: &Database) -> Result<AppSettings, Box<dyn std::error::Error>> {
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(SETTINGS_TABLE)?;
 
-    if let Some(value) = table.get(API_KEY_NAME)? {
-        let key: &str = value.value();
-        Ok(Some(key.to_string()))
-    } else {
-        Ok(None)
+        if let Some(value) = table.get(SETTINGS_KEY)? {
+            let value: &str = value.value();
+            let settings = serde_json::from_str::<AppSettings>(value)?;
+            Ok(settings)
+        } else {
+            unreachable!("replace me with proper error handling");
+        }
     }
-}
 
-#[allow(dead_code)]
-pub fn delete_api_key(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(API_KEY_TABLE)?;
-        table.remove(API_KEY_NAME)?;
-    }
-    write_txn.commit()?;
-    Ok(())
-}
+    pub fn download_path(&self, item: &ItemDetails) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let template = &self.download_path_template;
+        let mut metadata = HashMap::new();
+        metadata.insert("title".into(), item.title.clone());
 
-pub fn save_download_folder(
-    db: &Database,
-    folder_path: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(SETTINGS_TABLE)?;
-        table.insert(DOWNLOAD_FOLDER_KEY, folder_path)?;
-    }
-    write_txn.commit()?;
-    Ok(())
-}
+        if let Some(author) = &item.author {
+            metadata.insert("author".into(), author.clone());
+        };
 
-pub fn load_download_folder(db: &Database) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(SETTINGS_TABLE)?;
+        if let Some(series) = &item.series {
+            metadata.insert("series".into(), series.clone());
+        };
 
-    if let Some(value) = table.get(DOWNLOAD_FOLDER_KEY)? {
-        let folder: &str = value.value();
-        Ok(Some(folder.to_string()))
-    } else {
-        Ok(None)
+        if let Some(language) = &item.language {
+            metadata.insert("language".into(), language.clone());
+        };
+
+        if let Some(ext) = &item.format {
+            metadata.insert("ext".into(), ext.clone());
+        };
+
+        if let Some(year) = &item.year {
+            metadata.insert("year".into(), year.clone());
+        };
+
+        let TemplateResult::Path(path) = PathTemplate::resolve(template, &metadata) else {
+            panic!("No path template found + Please replace this panic with error handling");
+        };
+
+        let path = PathBuf::from(path);
+        
+        if !path.exists() {
+            fs::create_dir_all(&path)?;
+        }
+
+        Ok(path)
     }
 }

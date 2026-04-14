@@ -14,8 +14,10 @@ pub fn Settings() -> Element {
         spawn(async move {
             match get_settings().await {
                 Ok(settings) => {
-                    api_key_input.set(settings.api_key);
-                    download_folder_input.set(settings.download_folder);
+                    if let Some(api_key) = settings.api_key {
+                        api_key_input.set(api_key);
+                    }
+                    download_folder_input.set(settings.download_path_template);
                 }
                 Err(err) => {
                     status_message.set(format!("Error loading settings: {}", err));
@@ -25,12 +27,13 @@ pub fn Settings() -> Element {
     });
 
     let mut handle_save_settings = move |_| {
+        let api_key = api_key_input();
         let settings = AppSettings {
-            api_key: api_key_input(),
-            download_folder: download_folder_input(),
+            api_key: if api_key.is_empty() { None } else { Some(api_key) },
+            download_path_template: download_folder_input(),
         };
 
-        if settings.download_folder.is_empty() {
+        if settings.download_path_template.is_empty() {
             status_message.set("Error: Download folder cannot be empty".to_string());
             return;
         }
