@@ -119,13 +119,20 @@ impl AnnasArchiveClient {
         let page = options.page.unwrap_or(1);
         let query = urlencoding::encode(&options.query);
         let mut path = format!("/search?q={query}&page={page}");
+
+        // Legacy single lang support (deprecated)
         if let Some(lang) = options.lang {
-            path = format!("{}&lang={}", path, lang);
+            path = format!("{}&lang={}", path, lang.as_str());
         }
 
         // Add format filters (ext=pdf&ext=epub or ext=anti_mobi)
         for filter in &options.ext_filters {
             path = format!("{}&ext={}", path, urlencoding::encode(filter));
+        }
+
+        // Add language filters (lang=en&lang=fr or lang=anti_es)
+        for filter in &options.lang_filters {
+            path = format!("{}&lang={}", path, urlencoding::encode(filter));
         }
 
         let html = self.fetch_with_failover(&path).await?;

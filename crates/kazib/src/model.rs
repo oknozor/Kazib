@@ -1,6 +1,19 @@
-use annas_archive_api::ItemDetails;
+use annas_archive_api::{ItemDetails, Lang};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
+use std::fmt;
+
+/// Trait for types that can be used in tri-state filters
+pub trait Filterable: Copy + Eq + std::hash::Hash + fmt::Display {
+    /// Get the lowercase string for API calls
+    fn as_str(&self) -> &str;
+
+    /// Get primary items (shown by default)
+    fn primary() -> &'static [Self];
+
+    /// Get secondary items (shown after "more...")
+    fn secondary() -> Vec<Self>;
+}
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppSettings {
@@ -127,6 +140,34 @@ impl FileFormat {
         FileFormat::iter()
             .filter(|f| !Self::PRIMARY.contains(f))
             .collect()
+    }
+}
+
+impl Filterable for FileFormat {
+    fn as_str(&self) -> &str {
+        FileFormat::as_str(self)
+    }
+
+    fn primary() -> &'static [Self] {
+        Self::PRIMARY
+    }
+
+    fn secondary() -> Vec<Self> {
+        FileFormat::secondary()
+    }
+}
+
+impl Filterable for Lang {
+    fn as_str(&self) -> &str {
+        Lang::as_str(self)
+    }
+
+    fn primary() -> &'static [Self] {
+        Lang::PRIMARY
+    }
+
+    fn secondary() -> Vec<Self> {
+        Lang::secondary()
     }
 }
 

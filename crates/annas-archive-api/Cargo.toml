@@ -12,6 +12,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"], optional = true }
 urlencoding.workspace = true
+strum.workspace = true
 
 [features]
 server = ["dep:tokio"]

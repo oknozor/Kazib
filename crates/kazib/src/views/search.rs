@@ -4,13 +4,12 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
 
-use crate::model::{DownloadProgress, FileFormat, FilterState};
+use crate::model::{DownloadProgress, FileFormat, FilterState, Filterable};
 use crate::{Route, views::download_book};
 
 #[component]
 pub fn Search() -> Element {
     let mut input = use_signal(String::new);
-    let mut lang = use_signal(|| None::<Lang>);
     let mut format_filters = use_signal(|| {
         let mut map = HashMap::new();
         for format in FileFormat::iter() {
@@ -19,18 +18,28 @@ pub fn Search() -> Element {
         map
     });
 
-    let mut search_results = use_action(async move |input: String, lang: Option<String>, ext_filters: Vec<String>| {
-        if input.is_empty() {
-            return Ok(vec![]);
+    let mut lang_filters = use_signal(|| {
+        let mut map = HashMap::new();
+        for lang in Lang::iter() {
+            map.insert(lang, FilterState::Off);
         }
-
-        search(input, lang, ext_filters).await
+        map
     });
 
+    let mut search_results = use_action(
+        async move |input: String, ext_filters: Vec<String>, lang_filters: Vec<String>| {
+            if input.is_empty() {
+                return Ok(vec![]);
+            }
+
+            search(input, ext_filters, lang_filters).await
+        },
+    );
+
     let mut trigger_search = move || {
-        let lang_str = lang().map(|lang| lang.to_string());
-        let ext_filters = build_ext_filters(&format_filters());
-        search_results.call(input(), lang_str, ext_filters);
+        let ext_filters = build_filters(&format_filters());
+        let lang_query_filters = build_filters(&lang_filters());
+        search_results.call(input(), ext_filters, lang_query_filters);
     };
 
     let oninput = move |value: String| {
@@ -42,6 +51,14 @@ pub fn Search() -> Element {
         format_filters.with_mut(|filters| {
             let current_state = filters.get(&format).copied().unwrap_or(FilterState::Off);
             filters.insert(format, current_state.cycle());
+        });
+        trigger_search();
+    };
+
+    let on_lang_change = move |lang: Lang| {
+        lang_filters.with_mut(|filters| {
+            let current_state = filters.get(&lang).copied().unwrap_or(FilterState::Off);
+            filters.insert(lang, current_state.cycle());
         });
         trigger_search();
     };
@@ -63,28 +80,16 @@ pub fn Search() -> Element {
             aside { class: "search-sidebar",
                 h3 { "Filters" }
 
-                div { class: "filter-section",
-                    label { "Language" }
-                    select {
-                        id: "lang-select",
-                        onchange: move |e| {
-                            let selected_lang = match e.value().as_str() {
-                                "en" => Some(Lang::En),
-                                "fr" => Some(Lang::Fr),
-                                _ => None,
-                            };
-                            lang.set(selected_lang);
-                            trigger_search();
-                        },
-                        option { value: "", "All languages" }
-                        option { value: "en", "English" }
-                        option { value: "fr", "French" }
-                    }
+                FilterListComponent::<Lang> {
+                    label: "Language",
+                    filters: lang_filters(),
+                    on_change: on_lang_change,
                 }
 
-                FormatFiltersComponent {
-                    format_filters: format_filters(),
-                    on_format_change
+                FilterListComponent::<FileFormat> {
+                    label: "File Format",
+                    filters: format_filters(),
+                    on_change: on_format_change,
                 }
             }
 
@@ -96,29 +101,27 @@ pub fn Search() -> Element {
     }
 }
 
-// Helper function to build ext filter strings from filter states
-fn build_ext_filters(filters: &HashMap<FileFormat, FilterState>) -> Vec<String> {
-    let mut ext_filters = Vec::new();
+// Helper function to build filter strings from filter states
+fn build_filters<T: Filterable>(filters: &HashMap<T, FilterState>) -> Vec<String> {
+    let mut result = Vec::new();
 
-    for (format, state) in filters {
+    for (item, state) in filters {
         match state {
             FilterState::Include => {
-                ext_filters.push(format.as_str().to_string());
+                result.push(item.as_str().to_string());
             }
             FilterState::Exclude => {
-                ext_filters.push(format!("anti_{}", format.as_str()));
+                result.push(format!("anti__{}", item.as_str()));
             }
             FilterState::Off => {}
         }
     }
 
-    ext_filters
+    result
 }
 
 #[component]
-pub fn SearchInputComponent(
-    oninput: EventHandler<String>,
-) -> Element {
+pub fn SearchInputComponent(oninput: EventHandler<String>) -> Element {
     rsx! {
         div { class: "search-controls",
             input {
@@ -132,32 +135,36 @@ pub fn SearchInputComponent(
 }
 
 #[component]
-fn FormatFiltersComponent(
-    format_filters: HashMap<FileFormat, FilterState>,
-    on_format_change: EventHandler<FileFormat>,
-) -> Element {
+fn FilterListComponent<T: Filterable + IntoEnumIterator + 'static>(
+    label: &'static str,
+    filters: HashMap<T, FilterState>,
+    on_change: EventHandler<T>,
+) -> Element
+where
+    T: PartialEq + Clone,
+{
     let mut show_more = use_signal(|| false);
 
     rsx! {
         div { class: "filter-section",
-            label { "File Format" }
+            label { "{label}" }
             div { class: "format-filter-list",
-                // Primary formats (always visible)
-                for format in FileFormat::PRIMARY {
-                    FormatFilterCheckbox {
-                        format: *format,
-                        state: format_filters.get(format).copied().unwrap_or(FilterState::Off),
-                        on_click: move |_| on_format_change.call(*format)
+                // Primary items (always visible)
+                for item in T::primary() {
+                    FilterCheckbox {
+                        item: *item,
+                        state: filters.get(item).copied().unwrap_or(FilterState::Off),
+                        on_click: move |_| on_change.call(*item)
                     }
                 }
 
-                // Secondary formats (shown when expanded)
+                // Secondary items (shown when expanded)
                 if show_more() {
-                    for format in FileFormat::secondary() {
-                        FormatFilterCheckbox {
-                            format,
-                            state: format_filters.get(&format).copied().unwrap_or(FilterState::Off),
-                            on_click: move |_| on_format_change.call(format)
+                    for item in T::secondary() {
+                        FilterCheckbox {
+                            item,
+                            state: filters.get(&item).copied().unwrap_or(FilterState::Off),
+                            on_click: move |_| on_change.call(item)
                         }
                     }
                 }
@@ -178,8 +185,8 @@ fn FormatFiltersComponent(
 }
 
 #[component]
-fn FormatFilterCheckbox(
-    format: FileFormat,
+fn FilterCheckbox<T: Filterable + 'static>(
+    item: T,
     state: FilterState,
     on_click: EventHandler<()>,
 ) -> Element {
@@ -193,7 +200,7 @@ fn FormatFilterCheckbox(
         button {
             class: "{class}",
             onclick: move |_| on_click.call(()),
-            span { class: "format-name", "{format}" }
+            span { class: "format-name", "{item}" }
             if state != FilterState::Off {
                 span { class: "format-symbol", "{state.symbol()}" }
             }
@@ -309,8 +316,12 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
     }
 }
 
-#[get("/search?query&lang&ext_filters")]
-async fn search(query: String, lang: Option<String>, ext_filters: Vec<String>) -> Result<Vec<SearchResult>> {
+#[server]
+async fn search(
+    query: String,
+    ext_filters: Vec<String>,
+    lang_filters: Vec<String>,
+) -> Result<Vec<SearchResult>> {
     use crate::CLIENT;
     use annas_archive_api::SearchOptions;
     use dioxus::CapturedError;
@@ -321,12 +332,12 @@ async fn search(query: String, lang: Option<String>, ext_filters: Vec<String>) -
 
     let mut search_options = SearchOptions::new(query);
 
-    if let Some(lang) = lang {
-        search_options = search_options.with_lang(lang.into());
-    }
-
     if !ext_filters.is_empty() {
         search_options = search_options.with_ext_filters(ext_filters);
+    }
+
+    if !lang_filters.is_empty() {
+        search_options = search_options.with_lang_filters(lang_filters);
     }
 
     CLIENT

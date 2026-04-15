@@ -1,6 +1,7 @@
 use std::fmt::{self, Display};
 
 use serde::{Deserialize, Serialize};
+use strum::{Display as StrumDisplay, EnumIter, EnumString, IntoEnumIterator};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SearchResult {
@@ -18,14 +19,64 @@ pub struct SearchResult {
 pub struct SearchOptions {
     pub query: String,
     pub page: Option<u32>,
-    pub lang: Option<Lang>,
+    pub lang: Option<Lang>, // Deprecated: use lang_filters instead
     pub ext_filters: Vec<String>, // e.g., ["pdf", "epub", "anti_mobi"]
+    pub lang_filters: Vec<String>, // e.g., ["en", "fr", "anti_es"]
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, StrumDisplay, EnumIter, EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub enum Lang {
+    #[strum(serialize = "English")]
     En,
+    #[strum(serialize = "French")]
     Fr,
+    #[strum(serialize = "Spanish")]
+    Es,
+    #[strum(serialize = "German")]
+    De,
+    #[strum(serialize = "Italian")]
+    It,
+    #[strum(serialize = "Portuguese")]
+    Pt,
+    #[strum(serialize = "Russian")]
+    Ru,
+    #[strum(serialize = "Chinese")]
+    Zh,
+    #[strum(serialize = "Japanese")]
+    Ja,
+}
+
+impl Lang {
+    /// Get lowercase language code for API calls
+    pub fn as_str(&self) -> &str {
+        match self {
+            Lang::En => "en",
+            Lang::Fr => "fr",
+            Lang::Es => "es",
+            Lang::De => "de",
+            Lang::It => "it",
+            Lang::Pt => "pt",
+            Lang::Ru => "ru",
+            Lang::Zh => "zh",
+            Lang::Ja => "ja",
+        }
+    }
+
+    /// Primary languages shown by default
+    pub const PRIMARY: &'static [Lang] = &[
+        Lang::En,
+        Lang::Fr,
+        Lang::Es,
+        Lang::De,
+    ];
+
+    /// Secondary languages shown after clicking "more..."
+    pub fn secondary() -> Vec<Lang> {
+        Lang::iter()
+            .filter(|l| !Self::PRIMARY.contains(l))
+            .collect()
+    }
 }
 
 impl From<String> for Lang {
@@ -33,19 +84,15 @@ impl From<String> for Lang {
         match s.as_str() {
             "en" => Lang::En,
             "fr" => Lang::Fr,
+            "es" => Lang::Es,
+            "de" => Lang::De,
+            "it" => Lang::It,
+            "pt" => Lang::Pt,
+            "ru" => Lang::Ru,
+            "zh" => Lang::Zh,
+            "ja" => Lang::Ja,
             _ => Lang::En,
         }
-    }
-}
-
-impl Display for Lang {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let lang = match self {
-            Lang::En => "en",
-            Lang::Fr => "fr",
-        };
-
-        write!(f, "{}", lang)
     }
 }
 
@@ -56,6 +103,7 @@ impl SearchOptions {
             page: None,
             lang: None,
             ext_filters: Vec::new(),
+            lang_filters: Vec::new(),
         }
     }
 
@@ -71,6 +119,11 @@ impl SearchOptions {
 
     pub fn with_ext_filters(mut self, filters: Vec<String>) -> Self {
         self.ext_filters = filters;
+        self
+    }
+
+    pub fn with_lang_filters(mut self, filters: Vec<String>) -> Self {
+        self.lang_filters = filters;
         self
     }
 }
