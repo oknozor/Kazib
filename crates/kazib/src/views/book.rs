@@ -1,7 +1,6 @@
 use annas_archive_api::{Identifiers, ItemDetails};
+use dioxus::CapturedError;
 use dioxus::prelude::*;
-
-use crate::get_book_details;
 
 #[component]
 pub fn Book(md5: String) -> Element {
@@ -241,4 +240,17 @@ fn IdentifiersComponent(identifiers: Identifiers) -> Element {
             }
         }
     }
+}
+
+#[server]
+#[get("/book-details?md5")]
+async fn get_book_details(md5: String) -> Result<ItemDetails> {
+    use crate::CLIENT;
+
+    CLIENT
+        .read()
+        .unwrap()
+        .get_details(&md5)
+        .await
+        .map_err(CapturedError::from_display)
 }

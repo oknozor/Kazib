@@ -1,8 +1,7 @@
 use crate::AppSettings;
 use crate::path_template::{PathTemplate, TemplateResult};
-use crate::MissingField;
 use annas_archive_api::ItemDetails;
-use redb::{Database, TableDefinition, ReadableTable};
+use redb::{Database, ReadableTable, TableDefinition};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -101,16 +100,17 @@ impl AppSettings {
         };
 
         match PathTemplate::resolve(template, &metadata) {
-            TemplateResult::Path { directory, filename: _ } => {
+            TemplateResult::Path {
+                directory,
+                filename: _,
+            } => {
                 let dir_path = PathBuf::from(&directory);
                 if !dir_path.exists() {
                     fs::create_dir_all(&dir_path)?;
                 }
                 Ok(dir_path)
             }
-            TemplateResult::MissingFields(fields) => {
-                Err(TemplateError::MissingFields(fields))
-            }
+            TemplateResult::MissingFields(fields) => Err(TemplateError::MissingFields(fields)),
         }
     }
 
@@ -142,7 +142,7 @@ impl AppSettings {
     }
 }
 
-use crate::DownloadHistoryEntry;
+use crate::model::{DownloadHistoryEntry, MissingField};
 
 impl DownloadHistoryEntry {
     pub fn save(&self, db: &Database) -> Result<(), Box<dyn std::error::Error>> {

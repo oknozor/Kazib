@@ -1,3 +1,4 @@
+use crate::model::MissingField;
 use nom::{
     IResult, Parser,
     branch::alt,
@@ -8,7 +9,6 @@ use nom::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::MissingField;
 
 /// Template AST node types
 #[derive(Debug, Clone)]
@@ -156,7 +156,7 @@ impl PathTemplate {
         // Match everything until } or /
         take_till(|c| c == '}' || c == '/').parse(input)
     }
-    
+
     fn resolve_nodes(nodes: &[TemplateNode], metadata: &HashMap<String, String>) -> TemplateResult {
         let mut result = String::new();
         let mut missing = Vec::new();

@@ -1,8 +1,8 @@
-use crate::{DownloadHistoryEntry, HistoryStatus, delete_history_entry, get_download_history};
-use std::collections::HashMap;
-use crate::{AppSettings};
+use crate::AppSettings;
+use crate::model::{DownloadHistoryEntry, HistoryStatus};
 use dioxus::CapturedError;
 use dioxus::prelude::*;
+use std::collections::HashMap;
 
 #[component]
 pub fn History() -> Element {
@@ -443,4 +443,29 @@ pub async fn update_history_metadata(
     entry.save(&db).map_err(CapturedError::from_display)?;
 
     Ok(entry)
+}
+
+#[server]
+#[get("/api/download-history")]
+async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
+    use crate::DATABASE;
+    let db = DATABASE.clone();
+    DownloadHistoryEntry::get_all(&db).map_err(CapturedError::from_display)
+}
+
+#[server]
+#[delete("/api/delete-history?md5&delete_file")]
+async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
+    use crate::DATABASE;
+    let db = DATABASE.clone();
+
+    if delete_file {
+        if let Ok(Some(entry)) = DownloadHistoryEntry::get(&md5, &db) {
+            if let Some(file_path) = entry.file_path {
+                let _ = tokio::fs::remove_file(&file_path).await;
+            }
+        }
+    }
+
+    DownloadHistoryEntry::delete(&md5, &db).map_err(CapturedError::from_display)
 }

@@ -1,6 +1,7 @@
+use dioxus::CapturedError;
 use dioxus::prelude::*;
 
-use crate::{AppSettings, get_settings, save_settings};
+use crate::AppSettings;
 
 #[component]
 pub fn Settings() -> Element {
@@ -137,4 +138,28 @@ pub fn Settings() -> Element {
             }
         }
     }
+}
+
+#[server]
+#[post("/save-settings")]
+async fn save_settings(settings: AppSettings) -> Result<()> {
+    use crate::{CLIENT, DATABASE};
+    use annas_archive_api::AnnasArchiveClient;
+
+    let db = DATABASE.clone();
+    settings.save(&db).map_err(CapturedError::from_display)?;
+
+    if settings.api_key.is_some() {
+        *CLIENT.write().expect("failed to acquire write lock") =
+            AnnasArchiveClient::new("annas-archive.gl".to_string(), settings.api_key);
+    }
+
+    Ok(())
+}
+
+#[get("/get-settings")]
+async fn get_settings() -> Result<AppSettings> {
+    use crate::DATABASE;
+    let db = DATABASE.clone();
+    AppSettings::get(&db).map_err(CapturedError::from_display)
 }

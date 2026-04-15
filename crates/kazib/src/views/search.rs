@@ -1,7 +1,10 @@
-use annas_archive_api::{Lang, SearchResult};
+use annas_archive_api::{Lang, SearchOptions, SearchResult};
+use dioxus::CapturedError;
+use dioxus::fullstack::{WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 
-use crate::{DownloadProgress, Route, WebSocketOptions, Websocket, download_book, get_current_user};
+use crate::model::DownloadProgress;
+use crate::{Route, views::download_book};
 
 #[component]
 pub fn Search() -> Element {
@@ -12,7 +15,7 @@ pub fn Search() -> Element {
             return Ok(vec![]);
         }
 
-        crate::search(input, lang).await
+        search(input, lang).await
     });
 
     let oninput = move |value: String| {
@@ -185,4 +188,42 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
             }
         }
     }
+}
+
+#[get("/search?query&lang")]
+async fn search(query: String, lang: Option<String>) -> Result<Vec<SearchResult>> {
+    use crate::CLIENT;
+
+    if query.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let mut query = SearchOptions::new(query);
+
+    if let Some(lang) = lang {
+        query = query.with_lang(lang.into());
+    }
+
+    CLIENT
+        .read()
+        .unwrap()
+        .search(query)
+        .await
+        .map_err(CapturedError::from_display)
+        .map(|response| response.results)
+}
+
+#[get("/users/me", headers: dioxus::fullstack::HeaderMap)]
+async fn get_current_user() -> Result<Option<String>> {
+    use crate::{AppSettings, DATABASE};
+
+    let db = DATABASE.clone();
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+
+    let username = headers
+        .get(&settings.auth_header_name)
+        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok())
+        .map(|s: &str| s.to_string());
+
+    Ok(username)
 }
