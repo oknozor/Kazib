@@ -8,6 +8,7 @@ use nom::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::MissingField;
 
 /// Template AST node types
 #[derive(Debug, Clone)]
@@ -22,13 +23,6 @@ enum TemplateNode {
         name: String,
         content: Vec<TemplateNode>,
     },
-}
-
-/// A missing metadata field
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-pub struct MissingField {
-    pub variable: String,
-    pub description: String,
 }
 
 /// Result of template resolution

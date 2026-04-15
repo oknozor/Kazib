@@ -448,3 +448,323 @@ input {
     margin-right: 0.5rem;
     vertical-align: middle;
 }
+
+/* =========================
+   Download History
+   ========================= */
+
+.history-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+.history-container h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 2rem;
+}
+
+.history-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.filter-btn:hover {
+    background-color: #f5f5f5;
+}
+
+.filter-btn.active {
+    background-color: #0066cc;
+    color: #fff;
+    border-color: #0066cc;
+}
+
+.history-entry {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.history-entry:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.history-cover {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.history-content {
+    flex: 1;
+}
+
+.history-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 0.25rem;
+}
+
+.history-author {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.history-metadata {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.history-date {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.status-success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-pending {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.status-error {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.history-path {
+    font-size: 0.85rem;
+    color: #555;
+    margin-top: 0.5rem;
+}
+
+.history-temp-path {
+    font-size: 0.85rem;
+    color: #e65100;
+    margin-top: 0.5rem;
+}
+
+.history-error {
+    font-size: 0.85rem;
+    color: #c62828;
+    margin-top: 0.5rem;
+}
+
+.missing-fields {
+    margin-top: 0.5rem;
+}
+
+.missing-fields p {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.missing-field-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    background-color: #fff3e0;
+    color: #e65100;
+    border-radius: 3px;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.history-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-edit,
+.btn-delete {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-edit:hover {
+    background-color: #e3f2fd;
+    border-color: #0066cc;
+}
+
+.btn-delete:hover {
+    background-color: #ffebee;
+    border-color: #f44336;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+    font-size: 1rem;
+}
+
+/* =========================
+   Modal
+   ========================= */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 0.5rem;
+}
+
+.modal-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-group label.required {
+    color: #e65100;
+}
+
+.required-badge {
+    color: #f44336;
+    font-weight: 700;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-cancel {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+
+.btn-save {
+    background-color: #0066cc;
+    color: #fff;
+}
+
+.btn-save:hover:not(:disabled) {
+    background-color: #0052a3;
+}
+
+.btn-cancel:disabled,
+.btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

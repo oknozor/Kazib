@@ -1,7 +1,7 @@
 use annas_archive_api::{ItemDetails, SearchResult};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
-use views::{Book, Search, Settings};
+use views::{Book, Search, Settings, History};
 
 pub use dioxus_fullstack::{WebSocketOptions, Websocket};
 
@@ -16,6 +16,7 @@ use {
         sync::{Arc, RwLock},
     },
     tokio::{fs::File, io::AsyncWriteExt},
+    db::TemplateError,
 };
 
 #[cfg(feature = "server")]
@@ -25,6 +26,13 @@ mod db;
 mod path_template;
 
 mod views;
+
+/// A missing metadata field (shared between client and server)
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct MissingField {
+    pub variable: String,
+    pub description: String,
+}
 
 #[cfg(feature = "server")]
 static DATABASE: Lazy<Arc<Database>> = Lazy::new(async move || {
@@ -51,6 +59,8 @@ enum Route {
     Search{},
     #[route("/book/:md5")]
     Book{ md5: String },
+    #[route("/history")]
+    History{},
     #[route("/admin")]
     Settings{},
 }
@@ -137,6 +147,30 @@ pub enum DownloadProgress {
     },
 }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub enum HistoryStatus {
+    Success {
+        resolved_path: String,
+    },
+    Pending {
+        missing_fields: Vec<MissingField>,
+        temp_path: String,
+    },
+    Error {
+        message: String,
+    },
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct DownloadHistoryEntry {
+    pub md5: String,
+    pub item_details: ItemDetails,
+    pub status: HistoryStatus,
+    pub download_date: String,
+    pub file_path: Option<String>,
+    pub error_details: Option<String>,
+}
+
 #[server]
 #[post("/save-settings")]
 async fn save_settings(settings: AppSettings) -> Result<()> {
@@ -155,6 +189,110 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
 async fn get_settings() -> Result<AppSettings> {
     let db = DATABASE.clone();
     AppSettings::get(&db).map_err(CapturedError::from_display)
+}
+
+#[server]
+#[get("/api/download-history")]
+async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
+    let db = DATABASE.clone();
+    DownloadHistoryEntry::get_all(&db).map_err(CapturedError::from_display)
+}
+
+#[server]
+#[delete("/api/delete-history?md5&delete_file")]
+async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
+    let db = DATABASE.clone();
+
+    // Get entry to find file path
+    if delete_file {
+        if let Ok(Some(entry)) = DownloadHistoryEntry::get(&md5, &db) {
+            if let Some(file_path) = entry.file_path {
+                let _ = tokio::fs::remove_file(&file_path).await;
+            }
+        }
+    }
+
+    DownloadHistoryEntry::delete(&md5, &db).map_err(CapturedError::from_display)
+}
+
+#[server]
+#[post("/api/update-history-metadata")]
+async fn update_history_metadata(
+    md5: String,
+    updated_metadata: std::collections::HashMap<String, String>,
+) -> Result<DownloadHistoryEntry> {
+    use path_template::{PathTemplate, TemplateResult};
+
+    let db = DATABASE.clone();
+
+    // Get existing entry
+    let mut entry = DownloadHistoryEntry::get(&md5, &db)
+        .map_err(CapturedError::from_display)?
+        .ok_or_else(|| CapturedError::from_display("Entry not found"))?;
+
+    // Update item details with new metadata
+    if let Some(title) = updated_metadata.get("title") {
+        entry.item_details.title = title.clone();
+    }
+    if let Some(author) = updated_metadata.get("author") {
+        entry.item_details.author = Some(author.clone());
+    }
+    if let Some(series) = updated_metadata.get("series") {
+        entry.item_details.series = Some(series.clone());
+    }
+    if let Some(language) = updated_metadata.get("language") {
+        entry.item_details.language = Some(language.clone());
+    }
+    if let Some(year) = updated_metadata.get("year") {
+        entry.item_details.year = Some(year.clone());
+    }
+    if let Some(ext) = updated_metadata.get("ext") {
+        entry.item_details.format = Some(ext.clone());
+    }
+
+    // Try to resolve path again
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+    let template = &settings.download_path_template;
+
+    match PathTemplate::resolve(template, &updated_metadata) {
+        TemplateResult::Path { directory, filename } => {
+            // Create new path
+            let new_dir = std::path::PathBuf::from(&directory);
+            if let Err(e) = std::fs::create_dir_all(&new_dir) {
+                return Err(CapturedError::from_display(format!("Failed to create directory: {}", e)));
+            }
+
+            let new_file_path = new_dir.join(&filename);
+
+            // Move file from temp to final location
+            if let Some(old_path) = &entry.file_path {
+                if let Err(e) = tokio::fs::rename(old_path, &new_file_path).await {
+                    return Err(CapturedError::from_display(format!("Failed to move file: {}", e)));
+                }
+            }
+
+            // Update entry
+            entry.status = HistoryStatus::Success {
+                resolved_path: new_file_path.to_string_lossy().to_string(),
+            };
+            entry.file_path = Some(new_file_path.to_string_lossy().to_string());
+            entry.error_details = None;
+        }
+        TemplateResult::MissingFields(fields) => {
+            // Still missing fields
+            if let Some(ref temp_path) = entry.file_path {
+                entry.status = HistoryStatus::Pending {
+                    missing_fields: fields,
+                    temp_path: temp_path.clone(),
+                };
+            }
+        }
+    }
+
+    // Save updated entry
+    entry.save(&db).map_err(CapturedError::from_display)?;
+
+    Ok(entry)
 }
 
 #[get("/api/download-book?md5")]
@@ -184,13 +322,32 @@ async fn download_book(
             return;
         };
 
-        let download_folder = match settings.download_path(&item_details) {
-            Ok(folder) => folder,
-            _ => {
+        // Try to resolve download path, fallback to temp if template has missing fields
+        let (download_folder, history_status) = match settings.download_path(&item_details) {
+            Ok(folder) => (folder, None), // Will set to Success after download
+            Err(TemplateError::MissingFields(fields)) => {
+                // Create temp directory for pending downloads
+                let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
+                let temp_path = temp_dir.to_string_lossy().to_string();
+                if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
+                    let _ = socket
+                        .send(DownloadProgress::Error {
+                            md5: md5.clone(),
+                            error: format!("Failed to create temp directory: {}", e),
+                        })
+                        .await;
+                    return;
+                }
+                (temp_dir, Some(HistoryStatus::Pending {
+                    missing_fields: fields,
+                    temp_path,
+                }))
+            }
+            Err(e) => {
                 let _ = socket
                     .send(DownloadProgress::Error {
                         md5: md5.clone(),
-                        error: "Download folder not configured".to_string(),
+                        error: format!("Template error: {}", e),
                     })
                     .await;
                 return;
@@ -301,6 +458,25 @@ async fn download_book(
             return;
         }
 
+        // Determine final status
+        let final_status = history_status.unwrap_or_else(|| HistoryStatus::Success {
+            resolved_path: file_path.to_string_lossy().to_string(),
+        });
+
+        // Save to history
+        let history_entry = DownloadHistoryEntry {
+            md5: md5.clone(),
+            item_details: item_details.clone(),
+            status: final_status,
+            download_date: chrono::Utc::now().to_rfc3339(),
+            file_path: Some(file_path.to_string_lossy().to_string()),
+            error_details: None,
+        };
+
+        if let Err(e) = history_entry.save(&db) {
+            eprintln!("Failed to save download history: {}", e);
+        }
+
         // Send completion message
         let _ = socket
             .send(DownloadProgress::Completed {
@@ -344,6 +520,7 @@ fn Navbar() -> Element {
     rsx! {
         div { id: "navbar",
             Link { to: Route::Search {}, "Home" }
+            Link { to: Route::History {}, "History" }
             Link { to: Route::Settings {}, "Settings" }
         }
 

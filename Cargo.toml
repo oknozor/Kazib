@@ -23,6 +23,7 @@ urlencoding = "2.1"
 nom = "8.0"
 futures-util = { version = "0.3" }
 dirs = "6.0.0"
+chrono = { version = "0.4", features = ["serde"] }
 
 [profile.release]
 strip = true

@@ -421,6 +421,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link 0.2.1",
 ]
@@ -2860,6 +2861,7 @@ name = "kazib"
 version = "0.1.0"
 dependencies = [
  "annas-archive-api",
+ "chrono",
  "dioxus",
  "dirs",
  "futures-util",
