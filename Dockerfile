@@ -15,13 +15,23 @@ RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ca
 
 RUN dx bundle --package kazib --web --release --debug-symbols=false
 
-FROM chef AS runtime
-COPY --from=builder /app/target/dx/kazib/release/web/ /usr/local/app
+FROM debian:bookworm-slim AS runtime
 
-ENV PORT=8080
-ENV IP=0.0.0.0
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates catatonit \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder --chown=root:root --chmod=755 \
+     /app/target/dx/kazib/release/web/ /app
+
+RUN mkdir -p /app/data && chown 65534:65534 /app/data
+
+ENV PORT=8080 \
+    IP=0.0.0.0
 
 EXPOSE 8080
+WORKDIR /app
 
-WORKDIR /usr/local/app
-ENTRYPOINT [ "/usr/local/app/server" ]
+USER 65534:65534
+
+ENTRYPOINT ["/usr/bin/catatonit", "--", "/app/server"]
