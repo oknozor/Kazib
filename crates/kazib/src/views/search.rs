@@ -136,15 +136,40 @@ fn FormatFiltersComponent(
     format_filters: HashMap<FileFormat, FilterState>,
     on_format_change: EventHandler<FileFormat>,
 ) -> Element {
+    let mut show_more = use_signal(|| false);
+
     rsx! {
         div { class: "filter-section",
             label { "File Format" }
             div { class: "format-filter-list",
-                for format in FileFormat::iter() {
+                // Primary formats (always visible)
+                for format in FileFormat::PRIMARY {
                     FormatFilterCheckbox {
-                        format,
-                        state: format_filters.get(&format).copied().unwrap_or(FilterState::Off),
-                        on_click: move |_| on_format_change.call(format)
+                        format: *format,
+                        state: format_filters.get(format).copied().unwrap_or(FilterState::Off),
+                        on_click: move |_| on_format_change.call(*format)
+                    }
+                }
+
+                // Secondary formats (shown when expanded)
+                if show_more() {
+                    for format in FileFormat::secondary() {
+                        FormatFilterCheckbox {
+                            format,
+                            state: format_filters.get(&format).copied().unwrap_or(FilterState::Off),
+                            on_click: move |_| on_format_change.call(format)
+                        }
+                    }
+                }
+
+                // More/Less button
+                button {
+                    class: "more-button",
+                    onclick: move |_| show_more.set(!show_more()),
+                    if show_more() {
+                        "Less..."
+                    } else {
+                        "More..."
                     }
                 }
             }

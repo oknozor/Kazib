@@ -1,6 +1,6 @@
 use annas_archive_api::ItemDetails;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppSettings {
@@ -111,6 +111,22 @@ impl FileFormat {
             FileFormat::Cbr => "cbr",
             FileFormat::Txt => "txt",
         }
+    }
+
+    /// Primary formats shown by default (before "more..." button)
+    pub const PRIMARY: &'static [FileFormat] = &[
+        FileFormat::Pdf,
+        FileFormat::Epub,
+        FileFormat::Cbz,
+        FileFormat::Mobi,
+        FileFormat::Fb2,
+    ];
+
+    /// Secondary formats shown after clicking "more..."
+    pub fn secondary() -> Vec<FileFormat> {
+        FileFormat::iter()
+            .filter(|f| !Self::PRIMARY.contains(f))
+            .collect()
     }
 }
 
