@@ -118,21 +118,21 @@ impl From<String> for Lang {
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum ContentType {
-    #[strum(serialize = "Book (non fiction)")]
+    #[strum(serialize = "📘 Book (non fiction)")]
     BookNonfiction,
-    #[strum(serialize = "Book (fiction)")]
+    #[strum(serialize = "📕 Book (fiction)")]
     BookFiction,
-    #[strum(serialize = "Book (unknown)")]
+    #[strum(serialize = "📗 Book (unknown)")]
     BookUnknown,
-    #[strum(serialize = "Magazine")]
+    #[strum(serialize = "📰 Magazine")]
     Magazine,
-    #[strum(serialize = "Comic book")]
+    #[strum(serialize = "💬 Comic book")]
     BookComic,
-    #[strum(serialize = "Standard document")]
+    #[strum(serialize = "📝 Standard document")]
     StandardsDocument,
-    #[strum(serialize = "Musical score")]
+    #[strum(serialize = "🎶 Musical score")]
     MusicalScore,
-    #[strum(serialize = "Other")]
+    #[strum(serialize = "🤨 Other")]
     Other,
 }
 
