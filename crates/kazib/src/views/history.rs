@@ -42,7 +42,8 @@ pub fn History() -> Element {
 
             match &*history.read() {
                 Some(Ok(entries)) => {
-                    let filtered_entries: Vec<_> = entries.iter()
+                    let filtered_entries: Vec<_> = entries
+                        .iter()
                         .filter(|entry| {
                             let current_filter = filter();
                             if current_filter == "all" {
@@ -57,7 +58,6 @@ pub fn History() -> Element {
                         })
                         .cloned()
                         .collect();
-
                     rsx! {
                         if filtered_entries.is_empty() {
                             div { class: "empty-state", "No downloads in this category" }
@@ -73,18 +73,18 @@ pub fn History() -> Element {
                                     },
                                     on_edit: move |e: DownloadHistoryEntry| {
                                         edit_entry.set(Some(e));
-                                    }
+                                    },
                                 }
                             }
                         }
                     }
-                },
+                }
                 Some(Err(err)) => rsx! {
                     div { class: "error-container", "Error loading history: {err}" }
                 },
                 None => rsx! {
                     div { class: "loading-container", "Loading..." }
-                }
+                },
             }
 
             if let Some(entry) = edit_entry() {
@@ -93,7 +93,7 @@ pub fn History() -> Element {
                     on_close: move |_| {
                         edit_entry.set(None);
                         refresh(());
-                    }
+                    },
                 }
             }
         }
@@ -116,7 +116,11 @@ fn HistoryEntry(
     rsx! {
         div { class: "history-entry",
             if let Some(ref cover_url) = entry_data.item_details.cover_url {
-                img { class: "history-cover", src: "{cover_url}", alt: "{entry_data.item_details.title}" }
+                img {
+                    class: "history-cover",
+                    src: "{cover_url}",
+                    alt: "{entry_data.item_details.title}",
+                }
             }
 
             div { class: "history-content",
@@ -160,7 +164,7 @@ fn HistoryEntry(
                     },
                     HistoryStatus::Error { message } => rsx! {
                         p { class: "history-error", "Error: {message}" }
-                    }
+                    },
                 }
             }
 
@@ -168,16 +172,18 @@ fn HistoryEntry(
                 {
                     let entry_clone = entry_data.clone();
                     match &entry_data.status {
-                        HistoryStatus::Pending { .. } | HistoryStatus::Error { .. } => rsx! {
-                            button {
-                                class: "btn-edit",
-                                onclick: move |_| {
-                                    on_edit.call(entry_clone.clone());
-                                },
-                                "✏️ Edit Metadata"
+                        HistoryStatus::Pending { .. } | HistoryStatus::Error { .. } => {
+                            rsx! {
+                                button {
+                                    class: "btn-edit",
+                                    onclick: move |_| {
+                                        on_edit.call(entry_clone.clone());
+                                    },
+                                    "✏️ Edit Metadata"
+                                }
                             }
-                        },
-                        _ => rsx! {}
+                        }
+                        _ => rsx! {},
                     }
                 }
 
@@ -244,10 +250,10 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
     };
 
     rsx! {
-        div { class: "modal-overlay",
-            onclick: move |_| on_close.call(()),
+        div { class: "modal-overlay", onclick: move |_| on_close.call(()),
 
-            div { class: "modal-content",
+            div {
+                class: "modal-content",
                 onclick: move |e| e.stop_propagation(),
 
                 h2 { "Edit Metadata" }
@@ -258,8 +264,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"title".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"title".to_string()) { "required" } else { "" },
                         "Title"
                         if missing_fields.contains(&"title".to_string()) {
                             span { class: "required-badge", " *" }
@@ -273,8 +278,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"author".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"author".to_string()) { "required" } else { "" },
                         "Author"
                         if missing_fields.contains(&"author".to_string()) {
                             span { class: "required-badge", " *" }
@@ -288,8 +292,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"series".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"series".to_string()) { "required" } else { "" },
                         "Series"
                         if missing_fields.contains(&"series".to_string()) {
                             span { class: "required-badge", " *" }
@@ -303,8 +306,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"language".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"language".to_string()) { "required" } else { "" },
                         "Language"
                         if missing_fields.contains(&"language".to_string()) {
                             span { class: "required-badge", " *" }
@@ -318,8 +320,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"year".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"year".to_string()) { "required" } else { "" },
                         "Year"
                         if missing_fields.contains(&"year".to_string()) {
                             span { class: "required-badge", " *" }
@@ -333,8 +334,7 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                 }
 
                 div { class: "form-group",
-                    label {
-                        class: if missing_fields.contains(&"ext".to_string()) { "required" } else { "" },
+                    label { class: if missing_fields.contains(&"ext".to_string()) { "required" } else { "" },
                         "Format"
                         if missing_fields.contains(&"ext".to_string()) {
                             span { class: "required-badge", " *" }
@@ -358,7 +358,11 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                         class: "btn-save",
                         onclick: handle_save,
                         disabled: saving(),
-                        if saving() { "Saving..." } else { "Save & Resolve Path" }
+                        if saving() {
+                            "Saving..."
+                        } else {
+                            "Save & Resolve Path"
+                        }
                     }
                 }
             }

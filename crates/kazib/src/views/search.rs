@@ -20,18 +20,16 @@ fn LibrarySelectorModal(
 ) -> Element {
     rsx! {
         div { class: "modal-overlay", onclick: move |_| on_cancel.call(()),
-            div { class: "modal-content library-selector", onclick: move |e| e.stop_propagation(),
+            div {
+                class: "modal-content library-selector",
+                onclick: move |e| e.stop_propagation(),
                 h2 { "Select Download Library" }
                 p { class: "modal-subtitle", "Choose where to save this book" }
 
                 div { class: "library-list",
                     for library in libraries.clone() {
                         button {
-                            class: if selected.as_ref() == Some(&library.name) {
-                                "library-option selected"
-                            } else {
-                                "library-option"
-                            },
+                            class: if selected.as_ref() == Some(&library.name) { "library-option selected" } else { "library-option" },
                             onclick: move |_| on_select.call(library.name.clone()),
                             "{library.name} → {library.path_template}"
                         }
@@ -39,7 +37,11 @@ fn LibrarySelectorModal(
                 }
 
                 div { class: "modal-actions",
-                    button { class: "btn-cancel", onclick: move |_| on_cancel.call(()), "Cancel" }
+                    button {
+                        class: "btn-cancel",
+                        onclick: move |_| on_cancel.call(()),
+                        "Cancel"
+                    }
                     button {
                         class: "btn-download",
                         disabled: selected.is_none(),
@@ -67,12 +69,14 @@ fn FilterModal(
 ) -> Element {
     rsx! {
         div { class: "modal-overlay", onclick: move |_| on_close.call(()),
-            div { class: "modal-content filter-modal", onclick: move |e| e.stop_propagation(),
+            div {
+                class: "modal-content filter-modal",
+                onclick: move |e| e.stop_propagation(),
                 h2 { "Filters" }
 
                 FilterListComponent::<Lang> {
                     label: "Language",
-                    filters: filters,
+                    filters,
                     on_change: on_lang_change,
                 }
 
@@ -89,7 +93,11 @@ fn FilterModal(
                 }
 
                 div { class: "modal-actions",
-                    button { class: "btn-cancel", onclick: move |_| on_close.call(()), "Close" }
+                    button {
+                        class: "btn-cancel",
+                        onclick: move |_| on_close.call(()),
+                        "Close"
+                    }
                 }
             }
         }
@@ -99,7 +107,7 @@ fn FilterModal(
 #[component]
 pub fn Search() -> Element {
     let mut input = use_signal(String::new);
-    let show_filter_modal = use_signal(|| false);
+    let mut show_filter_modal = use_signal(|| false);
 
     let mut format_filters = use_signal(|| {
         let mut map = HashMap::new();
@@ -180,16 +188,14 @@ pub fn Search() -> Element {
     };
 
     let toggle_filter_modal = {
-        let mut show = show_filter_modal.clone();
         move |_| {
-            show.set(!show());
+            show_filter_modal.set(!show_filter_modal());
         }
     };
 
     let close_filter_modal = {
-        let mut show = show_filter_modal.clone();
         move |_| {
-            show.set(false);
+            show_filter_modal.set(false);
         }
     };
 
@@ -231,9 +237,9 @@ pub fn Search() -> Element {
 
             main { class: "search-main",
                 SearchInputComponent {
-                    oninput: oninput.clone(),
+                    oninput,
                     show_filter_button: true,
-                    on_filter_click: toggle_filter_modal.clone()
+                    on_filter_click: toggle_filter_modal,
                 }
                 {results}
             }
@@ -244,10 +250,10 @@ pub fn Search() -> Element {
                     filters: lang_filters(),
                     format_filters: format_filters(),
                     content_type_filters: content_type_filters(),
-                    on_lang_change: on_lang_change.clone(),
-                    on_format_change: on_format_change.clone(),
-                    on_content_type_change: on_content_type_change.clone(),
-                    on_close: close_filter_modal.clone(),
+                    on_lang_change,
+                    on_format_change,
+                    on_content_type_change,
+                    on_close: close_filter_modal,
                 }
             }
         }
@@ -318,7 +324,7 @@ where
                     FilterCheckbox {
                         item: *item,
                         state: filters.get(item).copied().unwrap_or(FilterState::Off),
-                        on_click: move |_| on_change.call(*item)
+                        on_click: move |_| on_change.call(*item),
                     }
                 }
 
@@ -328,7 +334,7 @@ where
                         FilterCheckbox {
                             item,
                             state: filters.get(&item).copied().unwrap_or(FilterState::Off),
-                            on_click: move |_| on_change.call(item)
+                            on_click: move |_| on_change.call(item),
                         }
                     }
                 }
@@ -361,9 +367,7 @@ fn FilterCheckbox<T: Filterable + 'static>(
     };
 
     rsx! {
-        button {
-            class: "{class}",
-            onclick: move |_| on_click.call(()),
+        button { class: "{class}", onclick: move |_| on_click.call(()),
             span { class: "format-name", "{item}" }
             if state != FilterState::Off {
                 span { class: "format-symbol", "{state.symbol()}" }
@@ -500,7 +504,9 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
 
                         // Show if book is in library
                         match is_in_library() {
-                            Some(true) => rsx! { span { class: "metadata-badge library-badge", "📚 In Library" } },
+                            Some(true) => rsx! {
+                                span { class: "metadata-badge library-badge", "📚 In Library" }
+                            },
                             Some(false) | None => rsx! {},
                         }
                     }
@@ -547,7 +553,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                                 }
                             }
                         }
-                    },
+                    }
                 }
             }
 

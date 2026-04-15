@@ -15,18 +15,16 @@ fn LibrarySelectorModal(
 ) -> Element {
     rsx! {
         div { class: "modal-overlay", onclick: move |_| on_cancel.call(()),
-            div { class: "modal-content library-selector", onclick: move |e| e.stop_propagation(),
+            div {
+                class: "modal-content library-selector",
+                onclick: move |e| e.stop_propagation(),
                 h2 { "Select Download Library" }
                 p { class: "modal-subtitle", "Choose where to save this book" }
 
                 div { class: "library-list",
                     for library in libraries.clone() {
                         button {
-                            class: if selected.as_ref() == Some(&library.name) {
-                                "library-option selected"
-                            } else {
-                                "library-option"
-                            },
+                            class: if selected.as_ref() == Some(&library.name) { "library-option selected" } else { "library-option" },
                             onclick: move |_| on_select.call(library.name.clone()),
                             "{library.name} → {library.path_template}"
                         }
@@ -34,7 +32,11 @@ fn LibrarySelectorModal(
                 }
 
                 div { class: "modal-actions",
-                    button { class: "btn-cancel", onclick: move |_| on_cancel.call(()), "Cancel" }
+                    button {
+                        class: "btn-cancel",
+                        onclick: move |_| on_cancel.call(()),
+                        "Cancel"
+                    }
                     button {
                         class: "btn-download",
                         disabled: selected.is_none(),
@@ -175,7 +177,9 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
                         "{details.title}"
                         // Show if book is in library
                         match is_in_library() {
-                            Some(true) => rsx! { span { class: "library-badge", " 📚 In Library" } },
+                            Some(true) => rsx! {
+                                span { class: "library-badge", " 📚 In Library" }
+                            },
                             Some(false) | None => rsx! {},
                         }
                     }
@@ -246,7 +250,7 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
                                         }
                                     }
                                 }
-                            },
+                            }
                         }
                     }
                 }

@@ -129,7 +129,7 @@ pub fn Settings() -> Element {
                         disabled: is_loading(),
                         oninput: move |e| {
                             api_key_input.set(e.value());
-                        }
+                        },
                     }
                 }
 
@@ -137,7 +137,9 @@ pub fn Settings() -> Element {
 
                     h2 { "Authentication Header" }
                     p { "Header name to extract username from (for reverse proxy authentication)" }
-                    p { class: "help-text", "Examples: x-authentik-username, Remote-User, X-Forwarded-User" }
+                    p { class: "help-text",
+                        "Examples: x-authentik-username, Remote-User, X-Forwarded-User"
+                    }
 
                     input {
                         r#type: "text",
@@ -152,7 +154,9 @@ pub fn Settings() -> Element {
 
                     h2 { "Libraries" }
                     p { "Define named libraries to organize downloads by category" }
-                    p { class: "help-text", "Use path templates with variables like {{title}}, {{author}}, {{series}}, etc. Example: /books/{{author}}/{{title}}.{{ext}}" }
+                    p { class: "help-text",
+                        "Use path templates with variables like {{title}}, {{author}}, {{series}}, etc. Example: /books/{{author}}/{{title}}.{{ext}}"
+                    }
 
                     div { class: "libraries-list",
                         for library in libraries_input() {
@@ -189,7 +193,8 @@ pub fn Settings() -> Element {
                             button {
                                 class: "btn-add-library",
                                 onclick: add_library,
-                                disabled: is_loading() || new_library_name().is_empty() || new_library_path_template().is_empty(),
+                                disabled: is_loading() || new_library_name().is_empty()
+                                    || new_library_path_template().is_empty(),
                                 "+"
                             }
                         }
