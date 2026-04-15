@@ -127,6 +127,9 @@ pub fn Settings() -> Element {
                         placeholder: "Enter your API key",
                         value: "{api_key_input}",
                         disabled: is_loading(),
+                        oninput: move |e| {
+                            api_key_input.set(e.value());
+                        }
                     }
                 }
 
