@@ -1,4 +1,4 @@
-use annas_archive_api::{Lang, SearchResult};
+use annas_archive_api::{ContentType, Lang, SearchResult};
 use dioxus::fullstack::{WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -26,20 +26,34 @@ pub fn Search() -> Element {
         map
     });
 
+    let mut content_type_filters = use_signal(|| {
+        let mut map = HashMap::new();
+        for content_type in ContentType::iter() {
+            map.insert(content_type, FilterState::Off);
+        }
+        map
+    });
+
     let mut search_results = use_action(
-        async move |input: String, ext_filters: Vec<String>, lang_filters: Vec<String>| {
+        async move |(input, ext_filters, lang_filters, content_filters): (
+            String,
+            Vec<String>,
+            Vec<String>,
+            Vec<String>,
+        )| {
             if input.is_empty() {
                 return Ok(vec![]);
             }
 
-            search(input, ext_filters, lang_filters).await
+            search(input, ext_filters, lang_filters, content_filters).await
         },
     );
 
     let mut trigger_search = move || {
         let ext_filters = build_filters(&format_filters());
         let lang_query_filters = build_filters(&lang_filters());
-        search_results.call(input(), ext_filters, lang_query_filters);
+        let content_filters = build_filters(&content_type_filters());
+        search_results.call((input(), ext_filters, lang_query_filters, content_filters));
     };
 
     let oninput = move |value: String| {
@@ -59,6 +73,17 @@ pub fn Search() -> Element {
         lang_filters.with_mut(|filters| {
             let current_state = filters.get(&lang).copied().unwrap_or(FilterState::Off);
             filters.insert(lang, current_state.cycle());
+        });
+        trigger_search();
+    };
+
+    let on_content_type_change = move |content_type: ContentType| {
+        content_type_filters.with_mut(|filters| {
+            let current_state = filters
+                .get(&content_type)
+                .copied()
+                .unwrap_or(FilterState::Off);
+            filters.insert(content_type, current_state.cycle());
         });
         trigger_search();
     };
@@ -90,6 +115,12 @@ pub fn Search() -> Element {
                     label: "File Format",
                     filters: format_filters(),
                     on_change: on_format_change,
+                }
+
+                FilterListComponent::<ContentType> {
+                    label: "Content",
+                    filters: content_type_filters(),
+                    on_change: on_content_type_change,
                 }
             }
 
@@ -135,13 +166,13 @@ pub fn SearchInputComponent(oninput: EventHandler<String>) -> Element {
 }
 
 #[component]
-fn FilterListComponent<T: Filterable + IntoEnumIterator + 'static>(
+fn FilterListComponent<T>(
     label: &'static str,
     filters: HashMap<T, FilterState>,
     on_change: EventHandler<T>,
 ) -> Element
 where
-    T: PartialEq + Clone,
+    T: Filterable + IntoEnumIterator + 'static + PartialEq + Clone,
 {
     let mut show_more = use_signal(|| false);
 
@@ -321,6 +352,7 @@ async fn search(
     query: String,
     ext_filters: Vec<String>,
     lang_filters: Vec<String>,
+    content_filters: Vec<String>,
 ) -> Result<Vec<SearchResult>> {
     use crate::CLIENT;
     use annas_archive_api::SearchOptions;
@@ -338,6 +370,10 @@ async fn search(
 
     if !lang_filters.is_empty() {
         search_options = search_options.with_lang_filters(lang_filters);
+    }
+
+    if !content_filters.is_empty() {
+        search_options = search_options.with_content_filters(content_filters);
     }
 
     CLIENT

@@ -12,6 +12,6 @@ pub use client::AnnasArchiveClient;
 
 pub use error::Error;
 pub use types::{
-    DownloadInfo, DownloadSource, Identifiers, IpfsInfo, ItemDetails, Lang, SearchOptions,
-    SearchResponse, SearchResult,
+    ContentType, DownloadInfo, DownloadSource, Identifiers, IpfsInfo, ItemDetails, Lang,
+    SearchOptions, SearchResponse, SearchResult,
 };

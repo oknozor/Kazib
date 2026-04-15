@@ -1,4 +1,4 @@
-use annas_archive_api::{ItemDetails, Lang};
+use annas_archive_api::{ContentType, ItemDetails, Lang};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
@@ -170,6 +170,27 @@ impl Filterable for Lang {
 
     fn secondary() -> Vec<Self> {
         Lang::secondary()
+    }
+}
+
+impl Filterable for ContentType {
+    fn as_str(&self) -> &str {
+        ContentType::as_str(self)
+    }
+
+    fn primary() -> &'static [Self] {
+        &[
+            ContentType::BookNonfiction,
+            ContentType::BookFiction,
+            ContentType::Magazine,
+            ContentType::BookComic,
+        ]
+    }
+
+    fn secondary() -> Vec<Self> {
+        ContentType::iter()
+            .filter(|c| !Self::primary().contains(c))
+            .collect()
     }
 }
 

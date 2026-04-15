@@ -17,9 +17,10 @@ pub struct SearchResult {
 pub struct SearchOptions {
     pub query: String,
     pub page: Option<u32>,
-    pub lang: Option<Lang>,        // Deprecated: use lang_filters instead
-    pub ext_filters: Vec<String>,  // e.g., ["pdf", "epub", "anti_mobi"]
-    pub lang_filters: Vec<String>, // e.g., ["en", "fr", "anti_es"]
+    pub lang: Option<Lang>,           // Deprecated: use lang_filters instead
+    pub ext_filters: Vec<String>,     // e.g., ["pdf", "epub", "anti_mobi"]
+    pub lang_filters: Vec<String>,    // e.g., ["en", "fr", "anti_es"]
+    pub content_filters: Vec<String>, // e.g., ["book_nonfiction", "anti__book_fiction"]
 }
 
 #[derive(
@@ -101,6 +102,56 @@ impl From<String> for Lang {
     }
 }
 
+/// Content types for filtering search results
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    StrumDisplay,
+    EnumIter,
+    EnumString,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum ContentType {
+    #[strum(serialize = "Book (non fiction)")]
+    BookNonfiction,
+    #[strum(serialize = "Book (fiction)")]
+    BookFiction,
+    #[strum(serialize = "Book (unknown)")]
+    BookUnknown,
+    #[strum(serialize = "Magazine")]
+    Magazine,
+    #[strum(serialize = "Comic book")]
+    BookComic,
+    #[strum(serialize = "Standard document")]
+    StandardsDocument,
+    #[strum(serialize = "Musical score")]
+    MusicalScore,
+    #[strum(serialize = "Other")]
+    Other,
+}
+
+impl ContentType {
+    /// Get the content type string for API calls
+    pub fn as_str(&self) -> &str {
+        match self {
+            ContentType::BookNonfiction => "book_nonfiction",
+            ContentType::BookFiction => "book_fiction",
+            ContentType::BookUnknown => "book_unknown",
+            ContentType::Magazine => "magazine",
+            ContentType::BookComic => "book_comic",
+            ContentType::StandardsDocument => "standards_document",
+            ContentType::MusicalScore => "musical_score",
+            ContentType::Other => "other",
+        }
+    }
+}
+
 impl SearchOptions {
     pub fn new(query: impl Into<String>) -> Self {
         Self {
@@ -109,6 +160,7 @@ impl SearchOptions {
             lang: None,
             ext_filters: Vec::new(),
             lang_filters: Vec::new(),
+            content_filters: Vec::new(),
         }
     }
 
@@ -129,6 +181,11 @@ impl SearchOptions {
 
     pub fn with_lang_filters(mut self, filters: Vec<String>) -> Self {
         self.lang_filters = filters;
+        self
+    }
+
+    pub fn with_content_filters(mut self, filters: Vec<String>) -> Self {
+        self.content_filters = filters;
         self
     }
 }

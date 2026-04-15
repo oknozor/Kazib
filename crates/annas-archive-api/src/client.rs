@@ -135,6 +135,11 @@ impl AnnasArchiveClient {
             path = format!("{}&lang={}", path, urlencoding::encode(filter));
         }
 
+        // Add content filters (content=book_nonfiction&content=anti__book_fiction)
+        for filter in &options.content_filters {
+            path = format!("{}&content={}", path, urlencoding::encode(filter));
+        }
+
         let html = self.fetch_with_failover(&path).await?;
         let (results, has_more) = parse_search_results(&html)?;
 
