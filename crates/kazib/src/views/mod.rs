@@ -6,7 +6,7 @@ mod book;
 mod history;
 mod search;
 
-use crate::model::{DownloadHistoryEntry, DownloadProgress, HistoryStatus};
+use crate::model::DownloadProgress;
 pub use admin::Settings;
 pub use book::Book;
 pub use history::History;
@@ -27,7 +27,9 @@ async fn download_book(
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
     Ok(options.on_upgrade(move |mut socket| async move {
+        use crate::model::{DownloadHistoryEntry, HistoryStatus};
         use crate::{AppSettings, CLIENT, DATABASE};
+
         let _ = socket.send(DownloadProgress::Started).await;
 
         let item_details = {

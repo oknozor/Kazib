@@ -1,6 +1,4 @@
-use crate::AppSettings;
 use crate::model::{DownloadHistoryEntry, HistoryStatus};
-use dioxus::CapturedError;
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
@@ -368,7 +366,10 @@ pub async fn update_history_metadata(
     md5: String,
     updated_metadata: std::collections::HashMap<String, String>,
 ) -> Result<DownloadHistoryEntry> {
+    use crate::AppSettings;
     use crate::DATABASE;
+    use dioxus::CapturedError;
+
     use crate::path_template::{PathTemplate, TemplateResult};
 
     let db = DATABASE.clone();
@@ -448,6 +449,8 @@ pub async fn update_history_metadata(
 #[get("/api/download-history")]
 async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
     use crate::DATABASE;
+    use dioxus::CapturedError;
+
     let db = DATABASE.clone();
     DownloadHistoryEntry::get_all(&db).map_err(CapturedError::from_display)
 }
@@ -455,6 +458,8 @@ async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
 #[delete("/api/delete-history?md5&delete_file")]
 async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
     use crate::DATABASE;
+    use dioxus::CapturedError;
+
     let db = DATABASE.clone();
 
     if delete_file {

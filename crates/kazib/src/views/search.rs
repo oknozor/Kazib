@@ -1,5 +1,4 @@
-use annas_archive_api::{Lang, SearchOptions, SearchResult};
-use dioxus::CapturedError;
+use annas_archive_api::{Lang, SearchResult};
 use dioxus::fullstack::{WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 
@@ -193,6 +192,8 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
 #[get("/search?query&lang")]
 async fn search(query: String, lang: Option<String>) -> Result<Vec<SearchResult>> {
     use crate::CLIENT;
+    use annas_archive_api::SearchOptions;
+    use dioxus::CapturedError;
 
     if query.is_empty() {
         return Ok(vec![]);
@@ -216,6 +217,7 @@ async fn search(query: String, lang: Option<String>) -> Result<Vec<SearchResult>
 #[get("/users/me", headers: dioxus::fullstack::HeaderMap)]
 async fn get_current_user() -> Result<Option<String>> {
     use crate::{AppSettings, DATABASE};
+    use dioxus::CapturedError;
 
     let db = DATABASE.clone();
     let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;

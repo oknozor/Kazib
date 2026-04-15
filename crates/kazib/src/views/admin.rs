@@ -1,4 +1,3 @@
-use dioxus::CapturedError;
 use dioxus::prelude::*;
 
 use crate::AppSettings;
@@ -144,6 +143,7 @@ pub fn Settings() -> Element {
 async fn save_settings(settings: AppSettings) -> Result<()> {
     use crate::{CLIENT, DATABASE};
     use annas_archive_api::AnnasArchiveClient;
+    use dioxus::CapturedError;
 
     let db = DATABASE.clone();
     settings.save(&db).map_err(CapturedError::from_display)?;
@@ -159,6 +159,8 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
 #[get("/get-settings")]
 async fn get_settings() -> Result<AppSettings> {
     use crate::DATABASE;
+    use dioxus::CapturedError;
+
     let db = DATABASE.clone();
     AppSettings::get(&db).map_err(CapturedError::from_display)
 }
