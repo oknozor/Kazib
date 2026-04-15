@@ -110,8 +110,147 @@
     border-color: #0066cc;
 }
 
-/* Libraries List */
-.libraries-list {
+.search-page {
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.search-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.search-sidebar > h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.search-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-controls {
+    margin-bottom: 2rem;
+}
+
+#search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+/* =========================
+   Search Page Layout
+   ========================= */
+
+.search-page {
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.search-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.search-sidebar > h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.search-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-controls {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 0.75rem;
+}
+
+#search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+/* Filter toggle button for mobile */
+.btn-filter-toggle {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid #0066cc;
+    background-color: #0066cc;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-filter-toggle:hover:not(:disabled) {
+    background-color: #0052a3;
+    border-color: #0052a3;
+}
+
+/* Filter modal for mobile */
+.filter-modal {
+    max-width: 500px;
+    max-height: 80vh;
+}
+
+.filter-modal h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 1rem;
+}
+Libraries List */ .libraries-list {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -246,16 +385,26 @@
     }
 
     .search-sidebar {
-        width: 100%;
-        position: static;
+        display: none;
     }
 
-    .search-sidebar > h3 {
-        font-size: 1.1rem;
+    .search-main {
+        width: 100%;
+    }
+
+    .search-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 
     #search-input {
         font-size: 1rem;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .btn-filter-toggle {
+        flex-shrink: 0;
     }
 
     .search-result-container {
@@ -457,12 +606,15 @@
     .modal-actions {
         gap: 0.5rem;
     }
-}
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    .search-controls {
+        flex-direction: row;
+    }
+
+    .btn-filter-toggle {
+        width: auto;
+        margin-top: 0;
+    }
 }
 
 body {

@@ -56,8 +56,51 @@ fn LibrarySelectorModal(
 }
 
 #[component]
+fn FilterModal(
+    filters: HashMap<Lang, FilterState>,
+    format_filters: HashMap<FileFormat, FilterState>,
+    content_type_filters: HashMap<ContentType, FilterState>,
+    on_lang_change: EventHandler<Lang>,
+    on_format_change: EventHandler<FileFormat>,
+    on_content_type_change: EventHandler<ContentType>,
+    on_close: EventHandler<()>,
+) -> Element {
+    rsx! {
+        div { class: "modal-overlay", onclick: move |_| on_close.call(()),
+            div { class: "modal-content filter-modal", onclick: move |e| e.stop_propagation(),
+                h2 { "Filters" }
+
+                FilterListComponent::<Lang> {
+                    label: "Language",
+                    filters: filters,
+                    on_change: on_lang_change,
+                }
+
+                FilterListComponent::<FileFormat> {
+                    label: "File Format",
+                    filters: format_filters,
+                    on_change: on_format_change,
+                }
+
+                FilterListComponent::<ContentType> {
+                    label: "Content",
+                    filters: content_type_filters,
+                    on_change: on_content_type_change,
+                }
+
+                div { class: "modal-actions",
+                    button { class: "btn-cancel", onclick: move |_| on_close.call(()), "Close" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
 pub fn Search() -> Element {
     let mut input = use_signal(String::new);
+    let show_filter_modal = use_signal(|| false);
+
     let mut format_filters = use_signal(|| {
         let mut map = HashMap::new();
         for format in FileFormat::iter() {
@@ -136,6 +179,20 @@ pub fn Search() -> Element {
         trigger_search();
     };
 
+    let toggle_filter_modal = {
+        let mut show = show_filter_modal.clone();
+        move |_| {
+            show.set(!show());
+        }
+    };
+
+    let close_filter_modal = {
+        let mut show = show_filter_modal.clone();
+        move |_| {
+            show.set(false);
+        }
+    };
+
     let results = match search_results.value() {
         Some(Ok(results)) => rsx! {
             for result in results() {
@@ -173,8 +230,25 @@ pub fn Search() -> Element {
             }
 
             main { class: "search-main",
-                SearchInputComponent { oninput }
+                SearchInputComponent {
+                    oninput: oninput.clone(),
+                    show_filter_button: true,
+                    on_filter_click: toggle_filter_modal.clone()
+                }
                 {results}
+            }
+
+            // Filter modal for mobile
+            if show_filter_modal() {
+                FilterModal {
+                    filters: lang_filters(),
+                    format_filters: format_filters(),
+                    content_type_filters: content_type_filters(),
+                    on_lang_change: on_lang_change.clone(),
+                    on_format_change: on_format_change.clone(),
+                    on_content_type_change: on_content_type_change.clone(),
+                    on_close: close_filter_modal.clone(),
+                }
             }
         }
     }
@@ -200,7 +274,11 @@ fn build_filters<T: Filterable>(filters: &HashMap<T, FilterState>) -> Vec<String
 }
 
 #[component]
-pub fn SearchInputComponent(oninput: EventHandler<String>) -> Element {
+pub fn SearchInputComponent(
+    oninput: EventHandler<String>,
+    show_filter_button: bool,
+    on_filter_click: EventHandler<()>,
+) -> Element {
     rsx! {
         div { class: "search-controls",
             input {
@@ -208,6 +286,13 @@ pub fn SearchInputComponent(oninput: EventHandler<String>) -> Element {
                 r#type: "search",
                 placeholder: "Search...",
                 oninput: move |e| oninput.call(e.value()),
+            }
+            if show_filter_button {
+                button {
+                    class: "btn-filter-toggle",
+                    onclick: move |_| on_filter_click.call(()),
+                    "Search settings"
+                }
             }
         }
     }
