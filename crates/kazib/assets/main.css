@@ -1,15 +1,240 @@
+Settings Page ========================= */ .admin-container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.admin-container h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 2rem;
+}
+
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.settings-section p {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+}
+
+.settings-section p.help-text {
+    font-size: 0.8rem;
+    color: #999;
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
+.settings-section input {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.settings-section input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+=======
 /* =========================
-   Global Styles
+   Settings Page
    ========================= */
 
-* {
+.admin-container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.admin-container h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 2rem;
+}
+
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.settings-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.settings-section p {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+}
+
+.settings-section p.help-text {
+    font-size: 0.8rem;
+    color: #999;
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
+.settings-section input {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+.settings-section input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+/* Libraries List */
+.libraries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.library-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: all 0.2s;
+}
+
+.library-item:hover {
+    border-color: #0066cc;
+    background-color: #f8f9fa;
+}
+
+.library-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.library-separator {
+    color: #999;
+    font-weight: 600;
+}
+
+.library-path {
+    color: #666;
+    font-size: 0.9rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-remove-library {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid #f44336;
+    background-color: #ffebee;
+    color: #c62828;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-remove-library:hover:not(:disabled) {
+    background-color: #f44336;
+    color: #fff;
+}
+
+/* Add Library Form */
+.add-library-form {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.library-input-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.library-input-group input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.library-input-group input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.btn-add-library {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid #0066cc;
+    background-color: #0066cc;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-add-library:hover:not(:disabled) {
+    background-color: #0052a3;
+    border-color: #0052a3;
+}
+
+.btn-add-library:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+========================= Global Styles ========================= */ * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial,
+        sans-serif;
     line-height: 1.6;
     color: #333;
     background-color: #f5f5f5;
@@ -309,7 +534,9 @@ input {
     background-color: #fff;
     border-radius: 4px;
     font-size: 0.9rem;
-    transition: background-color 0.2s, border-color 0.2s;
+    transition:
+        background-color 0.2s,
+        border-color 0.2s;
     white-space: nowrap;
 }
 
@@ -868,7 +1095,8 @@ input {
 }
 
 .btn-cancel,
-.btn-save {
+.btn-save,
+.btn-download {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
@@ -896,8 +1124,70 @@ input {
     background-color: #0052a3;
 }
 
+.btn-download:not(:disabled) {
+    background-color: #0066cc;
+    color: #fff;
+}
+
+.btn-download:hover:not(:disabled) {
+    background-color: #0052a3;
+}
+
 .btn-cancel:disabled,
-.btn-save:disabled {
+.btn-save:disabled,
+.btn-download:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Library Selector Modal */
+.library-selector {
+    max-width: 500px;
+}
+
+.library-selector h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 0.5rem;
+}
+
+.library-selector > p {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+.library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.library-option {
+    padding: 0.875rem 1.25rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.library-option:hover {
+    border-color: #0066cc;
+    background-color: #f8f9fa;
+}
+
+.library-option.selected {
+    border-color: #0066cc;
+    background-color: #e3f2fd;
+    color: #0066cc;
 }

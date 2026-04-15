@@ -17,7 +17,7 @@ fn LibrarySelectorModal(
         div { class: "modal-overlay", onclick: move |_| on_cancel.call(()),
             div { class: "modal-content library-selector", onclick: move |e| e.stop_propagation(),
                 h2 { "Select Download Library" }
-                p { "Choose where to save this book" }
+                p { class: "modal-subtitle", "Choose where to save this book" }
 
                 div { class: "library-list",
                     for library in libraries.clone() {
