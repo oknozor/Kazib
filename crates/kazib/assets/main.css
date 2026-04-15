@@ -354,6 +354,13 @@ input {
     margin-bottom: 0.75rem;
 }
 
+.settings-section p.help-text {
+    font-size: 0.8rem;
+    color: #999;
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
 .settings-section input {
     width: 100%;
     padding: 0.75rem;
@@ -543,6 +550,12 @@ input {
 .history-date {
     font-size: 0.85rem;
     color: #999;
+}
+
+.history-username {
+    font-size: 0.85rem;
+    color: #0066cc;
+    font-weight: 500;
 }
 
 .status-badge {

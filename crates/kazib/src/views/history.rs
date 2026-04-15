@@ -1,12 +1,12 @@
-use dioxus::prelude::*;
-use crate::{DownloadHistoryEntry, HistoryStatus, delete_history_entry, get_download_history, update_history_metadata};
+use crate::{DownloadHistoryEntry, HistoryStatus, delete_history_entry, get_download_history};
 use std::collections::HashMap;
+use crate::{AppSettings};
+use dioxus::CapturedError;
+use dioxus::prelude::*;
 
 #[component]
 pub fn History() -> Element {
-    let mut history = use_resource(|| async move {
-        get_download_history().await
-    });
+    let mut history = use_resource(|| async move { get_download_history().await });
 
     let mut filter = use_signal(|| "all".to_string());
     let mut edit_entry = use_signal(|| None::<DownloadHistoryEntry>);
@@ -129,6 +129,9 @@ fn HistoryEntry(
 
                 div { class: "history-metadata",
                     span { class: "history-date", "{entry_data.download_date}" }
+                    if let Some(ref username) = entry_data.username {
+                        span { class: "history-username", "👤 {username}" }
+                    }
                     span { class: "status-badge {status_class}",
                         match &entry_data.status {
                             HistoryStatus::Success { .. } => "✓ Success",
@@ -192,10 +195,7 @@ fn HistoryEntry(
 }
 
 #[component]
-fn EditMetadataModal(
-    entry: DownloadHistoryEntry,
-    on_close: EventHandler<()>,
-) -> Element {
+fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) -> Element {
     let mut title = use_signal(|| entry.item_details.title.clone());
     let mut author = use_signal(|| entry.item_details.author.clone().unwrap_or_default());
     let mut series = use_signal(|| entry.item_details.series.clone().unwrap_or_default());
@@ -362,3 +362,85 @@ fn EditMetadataModal(
     }
 }
 
+#[server]
+#[post("/api/update-history-metadata")]
+pub async fn update_history_metadata(
+    md5: String,
+    updated_metadata: std::collections::HashMap<String, String>,
+) -> Result<DownloadHistoryEntry> {
+    use crate::DATABASE;
+    use crate::path_template::{PathTemplate, TemplateResult};
+
+    let db = DATABASE.clone();
+
+    let mut entry = DownloadHistoryEntry::get(&md5, &db)
+        .map_err(CapturedError::from_display)?
+        .ok_or_else(|| CapturedError::from_display("Entry not found"))?;
+
+    // Update item details with new metadata
+    if let Some(title) = updated_metadata.get("title") {
+        entry.item_details.title = title.clone();
+    }
+    if let Some(author) = updated_metadata.get("author") {
+        entry.item_details.author = Some(author.clone());
+    }
+    if let Some(series) = updated_metadata.get("series") {
+        entry.item_details.series = Some(series.clone());
+    }
+    if let Some(language) = updated_metadata.get("language") {
+        entry.item_details.language = Some(language.clone());
+    }
+    if let Some(year) = updated_metadata.get("year") {
+        entry.item_details.year = Some(year.clone());
+    }
+    if let Some(ext) = updated_metadata.get("ext") {
+        entry.item_details.format = Some(ext.clone());
+    }
+
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+    let template = &settings.download_path_template;
+
+    match PathTemplate::resolve(template, &updated_metadata) {
+        TemplateResult::Path {
+            directory,
+            filename,
+        } => {
+            let new_dir = std::path::PathBuf::from(&directory);
+            if let Err(e) = std::fs::create_dir_all(&new_dir) {
+                return Err(CapturedError::from_display(format!(
+                    "Failed to create directory: {}",
+                    e
+                )));
+            }
+
+            let new_file_path = new_dir.join(&filename);
+
+            if let Some(old_path) = &entry.file_path {
+                if let Err(e) = tokio::fs::rename(old_path, &new_file_path).await {
+                    return Err(CapturedError::from_display(format!(
+                        "Failed to move file: {}",
+                        e
+                    )));
+                }
+            }
+
+            entry.status = HistoryStatus::Success {
+                resolved_path: new_file_path.to_string_lossy().to_string(),
+            };
+            entry.file_path = Some(new_file_path.to_string_lossy().to_string());
+            entry.error_details = None;
+        }
+        TemplateResult::MissingFields(fields) => {
+            if let Some(ref temp_path) = entry.file_path {
+                entry.status = HistoryStatus::Pending {
+                    missing_fields: fields,
+                    temp_path: temp_path.clone(),
+                };
+            }
+        }
+    }
+
+    entry.save(&db).map_err(CapturedError::from_display)?;
+
+    Ok(entry)
+}

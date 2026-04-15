@@ -2861,6 +2861,7 @@ name = "kazib"
 version = "0.1.0"
 dependencies = [
  "annas-archive-api",
+ "axum",
  "chrono",
  "dioxus",
  "dirs",

@@ -109,6 +109,7 @@ async fn get_book_details(md5: String) -> Result<ItemDetails> {
 pub struct AppSettings {
     pub api_key: Option<String>,
     pub download_path_template: String,
+    pub auth_header_name: String,
 }
 
 impl Default for AppSettings {
@@ -116,6 +117,7 @@ impl Default for AppSettings {
         let download_path_template = dirs::download_dir()
             .or(dirs::document_dir())
             .or(dirs::data_dir())
+            .or(dirs::home_dir())
             .expect("failed to get default download location");
 
         let download_path_template = download_path_template.join("Kazib");
@@ -124,6 +126,7 @@ impl Default for AppSettings {
         Self {
             api_key: None,
             download_path_template,
+            auth_header_name: "x-authentik-username".to_string(),
         }
     }
 }
@@ -169,6 +172,7 @@ pub struct DownloadHistoryEntry {
     pub download_date: String,
     pub file_path: Option<String>,
     pub error_details: Option<String>,
+    pub username: Option<String>,
 }
 
 #[server]
@@ -189,6 +193,27 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
 async fn get_settings() -> Result<AppSettings> {
     let db = DATABASE.clone();
     AppSettings::get(&db).map_err(CapturedError::from_display)
+}
+
+#[server]
+async fn get_current_user() -> Result<Option<String>> {
+    // Extract headers from HTTP request
+    // Note: Using deprecated extract() for now, works with Dioxus 0.7.4
+    #[allow(deprecated)]
+    let headers: axum::http::HeaderMap = dioxus::fullstack::extract()
+        .await
+        .map_err(|_| CapturedError::from_display("Failed to extract headers"))?;
+
+    let db = DATABASE.clone();
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+
+    // Extract username from the configured auth header
+    let username = headers
+        .get(&settings.auth_header_name)
+        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok())
+        .map(|s: &str| s.to_string());
+
+    Ok(username)
 }
 
 #[server]
@@ -215,89 +240,11 @@ async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
     DownloadHistoryEntry::delete(&md5, &db).map_err(CapturedError::from_display)
 }
 
-#[server]
-#[post("/api/update-history-metadata")]
-async fn update_history_metadata(
-    md5: String,
-    updated_metadata: std::collections::HashMap<String, String>,
-) -> Result<DownloadHistoryEntry> {
-    use path_template::{PathTemplate, TemplateResult};
 
-    let db = DATABASE.clone();
-
-    // Get existing entry
-    let mut entry = DownloadHistoryEntry::get(&md5, &db)
-        .map_err(CapturedError::from_display)?
-        .ok_or_else(|| CapturedError::from_display("Entry not found"))?;
-
-    // Update item details with new metadata
-    if let Some(title) = updated_metadata.get("title") {
-        entry.item_details.title = title.clone();
-    }
-    if let Some(author) = updated_metadata.get("author") {
-        entry.item_details.author = Some(author.clone());
-    }
-    if let Some(series) = updated_metadata.get("series") {
-        entry.item_details.series = Some(series.clone());
-    }
-    if let Some(language) = updated_metadata.get("language") {
-        entry.item_details.language = Some(language.clone());
-    }
-    if let Some(year) = updated_metadata.get("year") {
-        entry.item_details.year = Some(year.clone());
-    }
-    if let Some(ext) = updated_metadata.get("ext") {
-        entry.item_details.format = Some(ext.clone());
-    }
-
-    // Try to resolve path again
-    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
-    let template = &settings.download_path_template;
-
-    match PathTemplate::resolve(template, &updated_metadata) {
-        TemplateResult::Path { directory, filename } => {
-            // Create new path
-            let new_dir = std::path::PathBuf::from(&directory);
-            if let Err(e) = std::fs::create_dir_all(&new_dir) {
-                return Err(CapturedError::from_display(format!("Failed to create directory: {}", e)));
-            }
-
-            let new_file_path = new_dir.join(&filename);
-
-            // Move file from temp to final location
-            if let Some(old_path) = &entry.file_path {
-                if let Err(e) = tokio::fs::rename(old_path, &new_file_path).await {
-                    return Err(CapturedError::from_display(format!("Failed to move file: {}", e)));
-                }
-            }
-
-            // Update entry
-            entry.status = HistoryStatus::Success {
-                resolved_path: new_file_path.to_string_lossy().to_string(),
-            };
-            entry.file_path = Some(new_file_path.to_string_lossy().to_string());
-            entry.error_details = None;
-        }
-        TemplateResult::MissingFields(fields) => {
-            // Still missing fields
-            if let Some(ref temp_path) = entry.file_path {
-                entry.status = HistoryStatus::Pending {
-                    missing_fields: fields,
-                    temp_path: temp_path.clone(),
-                };
-            }
-        }
-    }
-
-    // Save updated entry
-    entry.save(&db).map_err(CapturedError::from_display)?;
-
-    Ok(entry)
-}
-
-#[get("/api/download-book?md5")]
+#[get("/api/download-book?md5&username")]
 async fn download_book(
     md5: String,
+    username: Option<String>,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
     Ok(options.on_upgrade(move |mut socket| async move {
@@ -309,7 +256,10 @@ async fn download_book(
         };
 
         let md5 = item_details.md5.clone();
-        let title = item_details.title.clone();
+        let title = match item_details.format.as_ref() {
+            Some(format) => format!("{}.{}", item_details.title, format.to_lowercase()),
+            None => item_details.title.clone(),
+        };
 
         let db = DATABASE.clone();
         let Ok(settings) = AppSettings::get(&db) else {
@@ -387,7 +337,7 @@ async fn download_book(
 
         let total_size = response.content_length().unwrap_or(0);
 
-        let filename = sanitize_filename(&title, &md5);
+        let filename = sanitize_filename(&title);
         let file_path = Path::new(&download_folder).join(&filename);
 
         let mut file = match File::create(&file_path).await {
@@ -471,6 +421,7 @@ async fn download_book(
             download_date: chrono::Utc::now().to_rfc3339(),
             file_path: Some(file_path.to_string_lossy().to_string()),
             error_details: None,
+            username,
         };
 
         if let Err(e) = history_entry.save(&db) {
@@ -488,7 +439,7 @@ async fn download_book(
 }
 
 #[cfg(feature = "server")]
-fn sanitize_filename(title: &str, md5: &str) -> String {
+fn sanitize_filename(title: &str) -> String {
     let sanitized = title
         .chars()
         .map(|c| match c {
@@ -497,12 +448,11 @@ fn sanitize_filename(title: &str, md5: &str) -> String {
         })
         .collect::<String>();
 
-    // Limit filename length and add md5 suffix
     let max_len = 200;
     if sanitized.len() > max_len {
-        format!("{}_{}.epub", &sanitized[..max_len], &md5[..8])
+        format!("{}", &sanitized[..max_len])
     } else {
-        format!("{}_{}.epub", sanitized, &md5[..8])
+        format!("{}", sanitized)
     }
 }
 

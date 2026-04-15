@@ -1,7 +1,7 @@
 use annas_archive_api::{Lang, SearchResult};
 use dioxus::prelude::*;
 
-use crate::{DownloadProgress, Route, WebSocketOptions, Websocket, download_book};
+use crate::{DownloadProgress, Route, WebSocketOptions, Websocket, download_book, get_current_user};
 
 #[component]
 pub fn Search() -> Element {
@@ -24,6 +24,8 @@ pub fn Search() -> Element {
 
     let onlang = move |selected_lang: Option<Lang>| {
         lang.set(selected_lang);
+        let lang = lang().map(|lang| lang.to_string());
+        search_results.call(input(), lang)
     };
 
     let results = match search_results.value() {
@@ -89,7 +91,10 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
 
         // Connect to websocket and start download
         spawn(async move {
-            if let Ok(socket) = download_book(md5, WebSocketOptions::new()).await {
+            // Get current user from auth header
+            let username = get_current_user().await.ok().flatten();
+
+            if let Ok(socket) = download_book(md5, username, WebSocketOptions::new()).await {
                 ws_socket.set(Some(socket));
 
                 // Listen for progress updates
