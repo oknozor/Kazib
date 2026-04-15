@@ -124,11 +124,17 @@ fn HistoryEntry(
                 if let Some(ref author) = entry_data.item_details.author {
                     p { class: "history-author", "{author}" }
                 }
+                if let Some(ref language) = entry_data.item_details.language {
+                    p { class: "history-language", "🌐 {language}" }
+                }
 
                 div { class: "history-metadata",
                     span { class: "history-date", "{entry_data.download_date}" }
                     if let Some(ref username) = entry_data.username {
                         span { class: "history-username", "👤 {username}" }
+                    }
+                    if let Some(ref format) = entry_data.item_details.format {
+                        span { class: "history-format", "{format}" }
                     }
                     span { class: "status-badge {status_class}",
                         match &entry_data.status {
@@ -453,6 +459,18 @@ async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
 
     let db = DATABASE.clone();
     DownloadHistoryEntry::get_all(&db).map_err(CapturedError::from_display)
+}
+
+#[get("/api/check-book-in-library?md5")]
+pub async fn check_book_in_library(md5: String) -> Result<bool> {
+    use crate::DATABASE;
+    use dioxus::CapturedError;
+
+    let db = DATABASE.clone();
+    let has_entry = DownloadHistoryEntry::get(&md5, &db)
+        .map_err(CapturedError::from_display)?
+        .is_some();
+    Ok(has_entry)
 }
 
 #[delete("/api/delete-history?md5&delete_file")]

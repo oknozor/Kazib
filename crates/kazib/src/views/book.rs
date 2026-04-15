@@ -3,7 +3,7 @@ use dioxus::fullstack::{WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 
 use crate::model::DownloadProgress;
-use crate::views::{download_book, get_current_user};
+use crate::views::{check_book_in_library, download_book, get_current_user};
 
 #[component]
 pub fn Book(md5: String) -> Element {
@@ -35,8 +35,13 @@ pub fn Book(md5: String) -> Element {
 #[component]
 fn BookDetailsComponent(details: ItemDetails) -> Element {
     let md5 = details.md5.clone();
+    let md5_for_check = md5.clone();
     let mut download_state = use_signal(|| None::<DownloadProgress>);
     let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+    let is_in_library = use_resource(move || {
+        let md5 = md5_for_check.clone();
+        async move { check_book_in_library(md5).await.unwrap_or(false) }
+    });
 
     let handle_download = move |_| {
         let md5 = md5.clone();
@@ -75,7 +80,14 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
                 div { class: "book-header-info",
 
-                    h1 { "{details.title}" }
+                    h1 {
+                        "{details.title}"
+                        // Show if book is in library
+                        match is_in_library() {
+                            Some(true) => rsx! { span { class: "library-badge", " 📚 In Library" } },
+                            Some(false) | None => rsx! {},
+                        }
+                    }
 
                     if let Some(ref author) = details.author {
                         p { class: "book-author",
@@ -129,8 +141,20 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
                                     "⚠ Retry"
                                 }
                             },
-                            None => rsx! {
-                                button { class: "download-button", onclick: handle_download, "⬇ Download" }
+                            None => {
+                                let in_library = is_in_library().unwrap_or(false);
+                                rsx! {
+                                    button {
+                                        class: "download-button",
+                                        disabled: in_library,
+                                        onclick: handle_download,
+                                        if in_library {
+                                            "📚 Already in Library"
+                                        } else {
+                                            "⬇ Download"
+                                        }
+                                    }
+                                }
                             },
                         }
                     }

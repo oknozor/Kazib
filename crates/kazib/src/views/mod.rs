@@ -9,7 +9,7 @@ mod search;
 use crate::model::DownloadProgress;
 pub use admin::Settings;
 pub use book::Book;
-pub use history::History;
+pub use history::{History, check_book_in_library};
 pub use search::Search;
 
 #[get("/users/me", headers: dioxus_fullstack::HeaderMap)]

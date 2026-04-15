@@ -7,7 +7,7 @@ use strum::IntoEnumIterator;
 use crate::model::{DownloadProgress, FileFormat, FilterState, Filterable};
 use crate::{
     Route,
-    views::{download_book, get_current_user},
+    views::{check_book_in_library, download_book, get_current_user},
 };
 
 #[component]
@@ -245,8 +245,13 @@ fn FilterCheckbox<T: Filterable + 'static>(
 #[component]
 pub fn SearchResultComponent(result: SearchResult) -> Element {
     let md5 = result.md5.clone();
+    let md5_for_check = result.md5.clone();
     let mut download_state = use_signal(|| None::<DownloadProgress>);
     let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+    let is_in_library = use_resource(move || {
+        let md5 = md5_for_check.clone();
+        async move { check_book_in_library(md5).await.unwrap_or(false) }
+    });
 
     let handle_download = move |e: Event<MouseData>| {
         let md5 = md5.clone();
@@ -311,6 +316,12 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                         if let Some(ref language) = result.language {
                             span { class: "metadata-badge", "{language}" }
                         }
+
+                        // Show if book is in library
+                        match is_in_library() {
+                            Some(true) => rsx! { span { class: "metadata-badge library-badge", "📚 In Library" } },
+                            Some(false) | None => rsx! {},
+                        }
                     }
                 }
             }
@@ -341,8 +352,20 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                             "⚠ Retry"
                         }
                     },
-                    None => rsx! {
-                        button { class: "download-button", onclick: handle_download, "⬇ Download" }
+                    None => {
+                        let in_library = is_in_library().unwrap_or(false);
+                        rsx! {
+                            button {
+                                class: "download-button",
+                                disabled: in_library,
+                                onclick: handle_download,
+                                if in_library {
+                                    "📚 Already in Library"
+                                } else {
+                                    "⬇ Download"
+                                }
+                            }
+                        }
                     },
                 }
             }
