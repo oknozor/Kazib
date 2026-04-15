@@ -7,10 +7,55 @@ mod history;
 mod search;
 
 use crate::model::DownloadProgress;
-pub use admin::Settings;
+pub use admin::{Settings, get_settings};
 pub use book::Book;
 pub use history::{History, check_book_in_library};
 pub use search::Search;
+
+#[cfg(feature = "server")]
+fn resolve_library_path(
+    library: &crate::model::Library,
+    item: &annas_archive_api::ItemDetails,
+) -> Result<std::path::PathBuf, crate::db::TemplateError> {
+    use crate::db::TemplateError;
+    use crate::path_template::{PathTemplate, TemplateResult};
+    use std::collections::HashMap;
+
+    let mut metadata = HashMap::new();
+    metadata.insert("title".into(), item.title.clone());
+
+    if let Some(author) = &item.author {
+        metadata.insert("author".into(), author.clone());
+    }
+
+    if let Some(series) = &item.series {
+        metadata.insert("series".into(), series.clone());
+    }
+
+    if let Some(language) = &item.language {
+        metadata.insert("language".into(), language.clone());
+    }
+
+    if let Some(year) = &item.year {
+        metadata.insert("year".into(), year.clone());
+    }
+
+    if let Some(ext) = &item.format {
+        metadata.insert("ext".into(), ext.clone());
+    }
+
+    match PathTemplate::resolve(&library.path_template, &metadata) {
+        TemplateResult::Path {
+            directory,
+            filename,
+        } => {
+            let mut path = std::path::PathBuf::from(&directory);
+            path.push(filename);
+            Ok(path)
+        }
+        TemplateResult::MissingFields(fields) => Err(TemplateError::MissingFields(fields)),
+    }
+}
 
 #[get("/users/me", headers: dioxus_fullstack::HeaderMap)]
 pub async fn get_current_user() -> Result<Option<String>> {
@@ -30,16 +75,16 @@ pub async fn get_current_user() -> Result<Option<String>> {
 
 #[cfg(feature = "server")]
 use {
-    crate::db::TemplateError,
     futures_util::StreamExt,
     std::path::Path,
     tokio::{fs::File, io::AsyncWriteExt},
 };
 
-#[get("/api/download-book?md5&username")]
+#[get("/api/download-book?md5&username&library")]
 async fn download_book(
     md5: String,
     username: Option<String>,
+    library: String,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
     Ok(options.on_upgrade(move |mut socket| async move {
@@ -64,46 +109,72 @@ async fn download_book(
             let _ = socket
                 .send(DownloadProgress::Error {
                     md5: md5.clone(),
-                    error: "Download folder not configured".to_string(),
+                    error: "Settings not configured".to_string(),
                 })
                 .await;
             return;
         };
 
-        // Try to resolve download path, fallback to temp if template has missing fields
-        let (download_folder, history_status) = match settings.download_path(&item_details) {
-            Ok(folder) => (folder, None), // Will set to Success after download
-            Err(TemplateError::MissingFields(fields)) => {
-                // Create temp directory for pending downloads
-                let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
-                let temp_path = temp_dir.to_string_lossy().to_string();
-                if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
+        // Find the library to use
+        let selected_lib = settings.libraries.iter().find(|l| l.name == library);
+
+        let Some(selected_lib) = selected_lib else {
+            let _ = socket
+                .send(DownloadProgress::Error {
+                    md5: md5.clone(),
+                    error: format!("Library '{}' not found", library),
+                })
+                .await;
+            return;
+        };
+
+        // Resolve the library path using the template
+        let (download_folder, history_status) =
+            match resolve_library_path(selected_lib, &item_details) {
+                Ok(path) => {
+                    // Create directory if it doesn't exist
+                    if let Err(e) = tokio::fs::create_dir_all(&path).await {
+                        let _ = socket
+                            .send(DownloadProgress::Error {
+                                md5: md5.clone(),
+                                error: format!("Failed to create library directory: {}", e),
+                            })
+                            .await;
+                        return;
+                    }
+                    (path, None)
+                }
+                Err(crate::db::TemplateError::MissingFields(fields)) => {
+                    // Create temp directory for pending downloads
+                    let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
+                    let temp_path = temp_dir.to_string_lossy().to_string();
+                    if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
+                        let _ = socket
+                            .send(DownloadProgress::Error {
+                                md5: md5.clone(),
+                                error: format!("Failed to create temp directory: {}", e),
+                            })
+                            .await;
+                        return;
+                    }
+                    (
+                        temp_dir,
+                        Some(HistoryStatus::Pending {
+                            missing_fields: fields,
+                            temp_path,
+                        }),
+                    )
+                }
+                Err(e) => {
                     let _ = socket
                         .send(DownloadProgress::Error {
                             md5: md5.clone(),
-                            error: format!("Failed to create temp directory: {}", e),
+                            error: format!("Template error: {}", e),
                         })
                         .await;
                     return;
                 }
-                (
-                    temp_dir,
-                    Some(HistoryStatus::Pending {
-                        missing_fields: fields,
-                        temp_path,
-                    }),
-                )
-            }
-            Err(e) => {
-                let _ = socket
-                    .send(DownloadProgress::Error {
-                        md5: md5.clone(),
-                        error: format!("Template error: {}", e),
-                    })
-                    .await;
-                return;
-            }
-        };
+            };
 
         let download_info = match CLIENT
             .read()

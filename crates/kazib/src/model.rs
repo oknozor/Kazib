@@ -15,28 +15,39 @@ pub trait Filterable: Copy + Eq + std::hash::Hash + fmt::Display {
     fn secondary() -> Vec<Self>;
 }
 
+/// A library represents a named destination for downloaded books
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct Library {
+    pub name: String,
+    pub path_template: String,
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppSettings {
     pub api_key: Option<String>,
-    pub download_path_template: String,
     pub auth_header_name: String,
+    #[serde(default)]
+    pub libraries: Vec<Library>,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
-        let download_path_template = dirs::download_dir()
+        let default_path = dirs::download_dir()
             .or(dirs::document_dir())
             .or(dirs::data_dir())
             .or(dirs::home_dir())
             .expect("failed to get default download location");
 
-        let download_path_template = download_path_template.join("Kazib");
-        let download_path_template = download_path_template.to_string_lossy().into_owned();
+        let default_path = default_path.join("Kazib");
+        let default_path = default_path.to_string_lossy().into_owned();
 
         Self {
             api_key: None,
-            download_path_template,
             auth_header_name: "x-authentik-username".to_string(),
+            libraries: vec![Library {
+                name: "Default".to_string(),
+                path_template: default_path,
+            }],
         }
     }
 }

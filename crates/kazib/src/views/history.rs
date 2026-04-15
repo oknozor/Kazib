@@ -405,7 +405,12 @@ pub async fn update_history_metadata(
     }
 
     let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
-    let template = &settings.download_path_template;
+    let template = if !settings.libraries.is_empty() {
+        &settings.libraries[0].path_template
+    } else {
+        // Fallback to a default template if no libraries (shouldn't happen due to default)
+        "/Kazib/{title}.{ext}"
+    };
 
     match PathTemplate::resolve(template, &updated_metadata) {
         TemplateResult::Path {

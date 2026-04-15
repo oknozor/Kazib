@@ -4,7 +4,7 @@ use annas_archive_api::ItemDetails;
 use redb::{Database, ReadableTable, TableDefinition};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug)]
 pub enum TemplateError {
@@ -72,73 +72,6 @@ impl AppSettings {
         } else {
             Ok(AppSettings::default())
         }
-    }
-
-    pub fn download_path(&self, item: &ItemDetails) -> Result<PathBuf, TemplateError> {
-        let template = &self.download_path_template;
-        let mut metadata = HashMap::new();
-        metadata.insert("title".into(), item.title.clone());
-
-        if let Some(author) = &item.author {
-            metadata.insert("author".into(), author.clone());
-        };
-
-        if let Some(series) = &item.series {
-            metadata.insert("series".into(), series.clone());
-        };
-
-        if let Some(language) = &item.language {
-            metadata.insert("language".into(), language.clone());
-        };
-
-        if let Some(ext) = &item.format {
-            metadata.insert("ext".into(), ext.clone());
-        };
-
-        if let Some(year) = &item.year {
-            metadata.insert("year".into(), year.clone());
-        };
-
-        match PathTemplate::resolve(template, &metadata) {
-            TemplateResult::Path {
-                directory,
-                filename: _,
-            } => {
-                let dir_path = PathBuf::from(&directory);
-                if !dir_path.exists() {
-                    fs::create_dir_all(&dir_path)?;
-                }
-                Ok(dir_path)
-            }
-            TemplateResult::MissingFields(fields) => Err(TemplateError::MissingFields(fields)),
-        }
-    }
-
-    pub fn extract_metadata(&self, item: &ItemDetails) -> HashMap<String, String> {
-        let mut metadata = HashMap::new();
-        metadata.insert("title".into(), item.title.clone());
-
-        if let Some(author) = &item.author {
-            metadata.insert("author".into(), author.clone());
-        };
-
-        if let Some(series) = &item.series {
-            metadata.insert("series".into(), series.clone());
-        };
-
-        if let Some(language) = &item.language {
-            metadata.insert("language".into(), language.clone());
-        };
-
-        if let Some(ext) = &item.format {
-            metadata.insert("ext".into(), ext.clone());
-        };
-
-        if let Some(year) = &item.year {
-            metadata.insert("year".into(), year.clone());
-        };
-
-        metadata
     }
 }
 

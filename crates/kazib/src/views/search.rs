@@ -4,11 +4,56 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
 
-use crate::model::{DownloadProgress, FileFormat, FilterState, Filterable};
+use crate::model::{DownloadProgress, FileFormat, FilterState, Filterable, Library};
 use crate::{
     Route,
-    views::{check_book_in_library, download_book, get_current_user},
+    views::{check_book_in_library, download_book, get_current_user, get_settings},
 };
+
+#[component]
+fn LibrarySelectorModal(
+    libraries: Vec<Library>,
+    selected: Option<String>,
+    on_select: EventHandler<String>,
+    on_cancel: EventHandler<()>,
+    on_download: EventHandler<String>,
+) -> Element {
+    rsx! {
+        div { class: "modal-overlay", onclick: move |_| on_cancel.call(()),
+            div { class: "modal-content library-selector", onclick: move |e| e.stop_propagation(),
+                h2 { "Select Download Library" }
+                p { "Choose where to save this book" }
+
+                div { class: "library-list",
+                    for library in libraries.clone() {
+                        button {
+                            class: if selected.as_ref() == Some(&library.name) {
+                                "library-option selected"
+                            } else {
+                                "library-option"
+                            },
+                            onclick: move |_| on_select.call(library.name.clone()),
+                            "{library.name} → {library.path_template}"
+                        }
+                    }
+                }
+
+                div { class: "modal-actions",
+                    button { class: "btn-cancel", onclick: move |_| on_cancel.call(()), "Cancel" }
+                    button {
+                        class: "btn-download",
+                        disabled: selected.is_none(),
+                        onclick: move |_| {
+                            let selected_clone = selected.clone();
+                            on_download.call(selected_clone.unwrap_or_default())
+                        },
+                        "Download"
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn Search() -> Element {
@@ -246,36 +291,94 @@ fn FilterCheckbox<T: Filterable + 'static>(
 pub fn SearchResultComponent(result: SearchResult) -> Element {
     let md5 = result.md5.clone();
     let md5_for_check = result.md5.clone();
-    let mut download_state = use_signal(|| None::<DownloadProgress>);
-    let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+    let download_state = use_signal(|| None::<DownloadProgress>);
+    let ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
     let is_in_library = use_resource(move || {
         let md5 = md5_for_check.clone();
         async move { check_book_in_library(md5).await.unwrap_or(false) }
     });
 
-    let handle_download = move |e: Event<MouseData>| {
+    // Library selection state
+    let show_library_selector = use_signal(|| false);
+    let selected_library = use_signal(|| None::<String>);
+    let available_libraries = use_resource(move || async move {
+        match get_settings().await {
+            Ok(settings) => settings.libraries,
+            Err(_) => Vec::new(),
+        }
+    });
+
+    let start_download = {
         let md5 = md5.clone();
-        e.stop_propagation();
+        let mut ws_socket = ws_socket.clone();
+        let mut download_state = download_state.clone();
+        let mut show_library_selector = show_library_selector.clone();
+        let mut selected_library = selected_library.clone();
 
-        // Connect to websocket and start download
-        spawn(async move {
-            // Get current user from auth header
-            let username = get_current_user().await.ok().flatten();
+        move |library_name: String| {
+            let md5 = md5.clone();
 
-            if let Ok(socket) = download_book(md5, username, WebSocketOptions::new()).await {
-                ws_socket.set(Some(socket));
+            spawn(async move {
+                let username = get_current_user().await.ok().flatten();
 
-                // Listen for progress updates
-                spawn(async move {
-                    let ws_socket = ws_socket.write().take();
-                    if let Some(socket) = ws_socket {
-                        while let Ok(progress) = socket.recv().await {
-                            download_state.set(Some(progress));
+                if let Ok(socket) =
+                    download_book(md5, username, library_name, WebSocketOptions::new()).await
+                {
+                    show_library_selector.set(false);
+                    selected_library.set(None);
+                    ws_socket.set(Some(socket));
+
+                    // Listen for progress updates
+                    spawn(async move {
+                        let mut ws_socket_lock = ws_socket.write().take();
+                        if let Some(socket) = ws_socket_lock.as_mut() {
+                            while let Ok(progress) = socket.recv().await {
+                                download_state.set(Some(progress));
+                            }
                         }
-                    }
-                });
+                    });
+                }
+            });
+        }
+    };
+
+    let open_library_selector = {
+        let available_libraries = available_libraries.clone();
+        let mut show_library_selector = show_library_selector.clone();
+
+        move |e: Event<MouseData>| {
+            e.stop_propagation();
+            if !available_libraries().unwrap_or_default().is_empty() {
+                show_library_selector.set(true);
             }
-        });
+        }
+    };
+
+    let handle_select_library = {
+        let mut selected_library = selected_library.clone();
+        move |lib_name: String| {
+            selected_library.set(Some(lib_name));
+        }
+    };
+
+    let close_library_selector = {
+        let mut show_library_selector = show_library_selector.clone();
+        let mut selected_library = selected_library.clone();
+        move |_| {
+            show_library_selector.set(false);
+            selected_library.set(None);
+        }
+    };
+
+    let confirm_download = {
+        let selected = selected_library.clone();
+        let start_download = start_download.clone();
+
+        move |_| {
+            if let Some(ref lib) = selected() {
+                start_download(lib.clone());
+            }
+        }
     };
 
     rsx! {
@@ -348,7 +451,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                         button {
                             class: "download-button error",
                             title: "{error}",
-                            onclick: handle_download,
+                            onclick: open_library_selector.clone(),
                             "⚠ Retry"
                         }
                     },
@@ -358,7 +461,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                             button {
                                 class: "download-button",
                                 disabled: in_library,
-                                onclick: handle_download,
+                                onclick: open_library_selector.clone(),
                                 if in_library {
                                     "📚 Already in Library"
                                 } else {
@@ -367,6 +470,19 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                             }
                         }
                     },
+                }
+            }
+
+            // Library selector modal
+            if show_library_selector() {
+                if let Some(libs) = available_libraries() {
+                    LibrarySelectorModal {
+                        libraries: libs.clone(),
+                        selected: selected_library(),
+                        on_select: handle_select_library,
+                        on_cancel: close_library_selector,
+                        on_download: confirm_download,
+                    }
                 }
             }
         }
