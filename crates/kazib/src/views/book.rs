@@ -81,16 +81,16 @@ pub fn Book(md5: String) -> Element {
 fn BookDetailsComponent(details: ItemDetails) -> Element {
     let md5 = details.md5.clone();
     let md5_for_check = md5.clone();
-    let download_state = use_signal(|| None::<DownloadProgress>);
-    let ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+    let mut download_state = use_signal(|| None::<DownloadProgress>);
+    let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
     let is_in_library = use_resource(move || {
         let md5 = md5_for_check.clone();
         async move { check_book_in_library(md5).await.unwrap_or(false) }
     });
 
     // Library selection state
-    let show_library_selector = use_signal(|| false);
-    let selected_library = use_signal(|| None::<String>);
+    let mut show_library_selector = use_signal(|| false);
+    let mut selected_library = use_signal(|| None::<String>);
     let available_libraries = use_resource(move || async move {
         match get_settings().await {
             Ok(settings) => settings.libraries,
@@ -100,11 +100,6 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
     let start_download = {
         let md5 = md5.clone();
-        let mut ws_socket = ws_socket.clone();
-        let mut download_state = download_state.clone();
-        let mut show_library_selector = show_library_selector.clone();
-        let mut selected_library = selected_library.clone();
-
         move |library_name: String| {
             let md5 = md5.clone();
 
@@ -132,9 +127,6 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
     };
 
     let open_library_selector = {
-        let available_libraries = available_libraries.clone();
-        let mut show_library_selector = show_library_selector.clone();
-
         move |_| {
             if !available_libraries().unwrap_or_default().is_empty() {
                 show_library_selector.set(true);
@@ -143,15 +135,12 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
     };
 
     let handle_select_library = {
-        let mut selected_library = selected_library.clone();
         move |lib_name: String| {
             selected_library.set(Some(lib_name));
         }
     };
 
     let close_library_selector = {
-        let mut show_library_selector = show_library_selector.clone();
-        let mut selected_library = selected_library.clone();
         move |_| {
             show_library_selector.set(false);
             selected_library.set(None);
@@ -159,11 +148,8 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
     };
 
     let confirm_download = {
-        let selected = selected_library.clone();
-        let start_download = start_download.clone();
-
         move |_| {
-            if let Some(ref lib) = selected() {
+            if let Some(ref lib) = selected_library() {
                 start_download(lib.clone());
             }
         }
@@ -446,7 +432,7 @@ fn IdentifiersComponent(identifiers: Identifiers) -> Element {
 
 #[get("/book-details?md5")]
 async fn get_book_details(md5: String) -> Result<ItemDetails> {
-    use crate::CLIENT;
+    use crate::server::CLIENT;
     use dioxus::CapturedError;
 
     CLIENT

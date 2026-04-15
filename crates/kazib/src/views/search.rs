@@ -291,16 +291,16 @@ fn FilterCheckbox<T: Filterable + 'static>(
 pub fn SearchResultComponent(result: SearchResult) -> Element {
     let md5 = result.md5.clone();
     let md5_for_check = result.md5.clone();
-    let download_state = use_signal(|| None::<DownloadProgress>);
-    let ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+    let mut download_state = use_signal(|| None::<DownloadProgress>);
+    let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
     let is_in_library = use_resource(move || {
         let md5 = md5_for_check.clone();
         async move { check_book_in_library(md5).await.unwrap_or(false) }
     });
 
     // Library selection state
-    let show_library_selector = use_signal(|| false);
-    let selected_library = use_signal(|| None::<String>);
+    let mut show_library_selector = use_signal(|| false);
+    let mut selected_library = use_signal(|| None::<String>);
     let available_libraries = use_resource(move || async move {
         match get_settings().await {
             Ok(settings) => settings.libraries,
@@ -310,10 +310,6 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
 
     let start_download = {
         let md5 = md5.clone();
-        let mut ws_socket = ws_socket.clone();
-        let mut download_state = download_state.clone();
-        let mut show_library_selector = show_library_selector.clone();
-        let mut selected_library = selected_library.clone();
 
         move |library_name: String| {
             let md5 = md5.clone();
@@ -343,9 +339,6 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
     };
 
     let open_library_selector = {
-        let available_libraries = available_libraries.clone();
-        let mut show_library_selector = show_library_selector.clone();
-
         move |e: Event<MouseData>| {
             e.stop_propagation();
             if !available_libraries().unwrap_or_default().is_empty() {
@@ -355,15 +348,15 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
     };
 
     let handle_select_library = {
-        let mut selected_library = selected_library.clone();
+        let mut selected_library = selected_library;
         move |lib_name: String| {
             selected_library.set(Some(lib_name));
         }
     };
 
     let close_library_selector = {
-        let mut show_library_selector = show_library_selector.clone();
-        let mut selected_library = selected_library.clone();
+        let mut show_library_selector = show_library_selector;
+        let mut selected_library = selected_library;
         move |_| {
             show_library_selector.set(false);
             selected_library.set(None);
@@ -371,7 +364,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
     };
 
     let confirm_download = {
-        let selected = selected_library.clone();
+        let selected = selected_library;
         let start_download = start_download.clone();
 
         move |_| {
@@ -451,7 +444,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                         button {
                             class: "download-button error",
                             title: "{error}",
-                            onclick: open_library_selector.clone(),
+                            onclick: open_library_selector,
                             "⚠ Retry"
                         }
                     },
@@ -461,7 +454,7 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
                             button {
                                 class: "download-button",
                                 disabled: in_library,
-                                onclick: open_library_selector.clone(),
+                                onclick: open_library_selector,
                                 if in_library {
                                     "📚 Already in Library"
                                 } else {
@@ -496,7 +489,7 @@ async fn search(
     lang_filters: Vec<String>,
     content_filters: Vec<String>,
 ) -> Result<Vec<SearchResult>> {
-    use crate::CLIENT;
+    use crate::server::CLIENT;
     use annas_archive_api::SearchOptions;
     use dioxus::CapturedError;
 

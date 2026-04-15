@@ -373,10 +373,10 @@ pub async fn update_history_metadata(
     updated_metadata: std::collections::HashMap<String, String>,
 ) -> Result<DownloadHistoryEntry> {
     use crate::AppSettings;
-    use crate::DATABASE;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
-    use crate::path_template::{PathTemplate, TemplateResult};
+    use crate::server::path_template::{PathTemplate, TemplateResult};
 
     let db = DATABASE.clone();
 
@@ -427,13 +427,13 @@ pub async fn update_history_metadata(
 
             let new_file_path = new_dir.join(&filename);
 
-            if let Some(old_path) = &entry.file_path {
-                if let Err(e) = tokio::fs::rename(old_path, &new_file_path).await {
-                    return Err(CapturedError::from_display(format!(
-                        "Failed to move file: {}",
-                        e
-                    )));
-                }
+            if let Some(old_path) = &entry.file_path
+                && let Err(e) = tokio::fs::rename(old_path, &new_file_path).await
+            {
+                return Err(CapturedError::from_display(format!(
+                    "Failed to move file: {}",
+                    e
+                )));
             }
 
             entry.status = HistoryStatus::Success {
@@ -459,7 +459,7 @@ pub async fn update_history_metadata(
 
 #[get("/api/download-history")]
 async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
-    use crate::DATABASE;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
     let db = DATABASE.clone();
@@ -468,7 +468,7 @@ async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
 
 #[get("/api/check-book-in-library?md5")]
 pub async fn check_book_in_library(md5: String) -> Result<bool> {
-    use crate::DATABASE;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
     let db = DATABASE.clone();
@@ -480,17 +480,16 @@ pub async fn check_book_in_library(md5: String) -> Result<bool> {
 
 #[delete("/api/delete-history?md5&delete_file")]
 async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
-    use crate::DATABASE;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
     let db = DATABASE.clone();
 
-    if delete_file {
-        if let Ok(Some(entry)) = DownloadHistoryEntry::get(&md5, &db) {
-            if let Some(file_path) = entry.file_path {
-                let _ = tokio::fs::remove_file(&file_path).await;
-            }
-        }
+    if delete_file
+        && let Ok(Some(entry)) = DownloadHistoryEntry::get(&md5, &db)
+        && let Some(file_path) = entry.file_path
+    {
+        let _ = tokio::fs::remove_file(&file_path).await;
     }
 
     DownloadHistoryEntry::delete(&md5, &db).map_err(CapturedError::from_display)

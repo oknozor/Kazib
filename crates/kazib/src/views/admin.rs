@@ -214,7 +214,7 @@ pub fn Settings() -> Element {
 
 #[post("/save-settings")]
 async fn save_settings(settings: AppSettings) -> Result<()> {
-    use crate::{CLIENT, DATABASE};
+    use crate::server::{CLIENT, DATABASE};
     use annas_archive_api::AnnasArchiveClient;
     use dioxus::CapturedError;
 
@@ -231,7 +231,7 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
 
 #[get("/get-settings")]
 pub async fn get_settings() -> Result<AppSettings> {
-    use crate::DATABASE;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
     let db = DATABASE.clone();

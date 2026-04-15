@@ -216,16 +216,16 @@ impl PathTemplate {
                 }
             },
             TemplateNode::Conditional { name, content } => {
-                if let Some(val) = metadata.get(name) {
-                    if !val.is_empty() {
-                        let mut result = String::new();
-                        for n in content {
-                            if let Some(s) = Self::resolve_node(n, metadata, missing) {
-                                result.push_str(&s);
-                            }
+                if let Some(val) = metadata.get(name)
+                    && !val.is_empty()
+                {
+                    let mut result = String::new();
+                    for n in content {
+                        if let Some(s) = Self::resolve_node(n, metadata, missing) {
+                            result.push_str(&s);
                         }
-                        return Some(result);
                     }
+                    return Some(result);
                 }
                 Some(String::new())
             }
@@ -256,7 +256,7 @@ impl PathTemplate {
 
     fn split_path(path: &str) -> (&str, &str) {
         // Find the last separator (/ or \)
-        let last_sep_pos = path.rfind(|c| c == '/' || c == '\\');
+        let last_sep_pos = path.rfind(['/', '\\']);
 
         match last_sep_pos {
             Some(pos) => {

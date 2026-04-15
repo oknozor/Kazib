@@ -1,9 +1,5 @@
 use crate::AppSettings;
-use crate::path_template::{PathTemplate, TemplateResult};
-use annas_archive_api::ItemDetails;
 use redb::{Database, ReadableTable, TableDefinition};
-use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 
 #[derive(Debug)]

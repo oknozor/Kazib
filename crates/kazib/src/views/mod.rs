@@ -16,9 +16,9 @@ pub use search::Search;
 fn resolve_library_path(
     library: &crate::model::Library,
     item: &annas_archive_api::ItemDetails,
-) -> Result<std::path::PathBuf, crate::db::TemplateError> {
-    use crate::db::TemplateError;
-    use crate::path_template::{PathTemplate, TemplateResult};
+) -> Result<std::path::PathBuf, crate::server::db::TemplateError> {
+    use crate::server::db::TemplateError;
+    use crate::server::path_template::{PathTemplate, TemplateResult};
     use std::collections::HashMap;
 
     let mut metadata = HashMap::new();
@@ -59,7 +59,8 @@ fn resolve_library_path(
 
 #[get("/users/me", headers: dioxus_fullstack::HeaderMap)]
 pub async fn get_current_user() -> Result<Option<String>> {
-    use crate::{AppSettings, DATABASE};
+    use crate::AppSettings;
+    use crate::server::DATABASE;
     use dioxus::CapturedError;
 
     let db = DATABASE.clone();
@@ -88,8 +89,9 @@ async fn download_book(
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
     Ok(options.on_upgrade(move |mut socket| async move {
+        use crate::AppSettings;
         use crate::model::{DownloadHistoryEntry, HistoryStatus};
-        use crate::{AppSettings, CLIENT, DATABASE};
+        use crate::server::{CLIENT, DATABASE};
 
         let _ = socket.send(DownloadProgress::Started).await;
 
@@ -144,7 +146,7 @@ async fn download_book(
                     }
                     (path, None)
                 }
-                Err(crate::db::TemplateError::MissingFields(fields)) => {
+                Err(crate::server::db::TemplateError::MissingFields(fields)) => {
                     // Create temp directory for pending downloads
                     let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
                     let temp_path = temp_dir.to_string_lossy().to_string();
@@ -322,8 +324,8 @@ fn sanitize_filename(title: &str) -> String {
 
     let max_len = 200;
     if sanitized.len() > max_len {
-        format!("{}", &sanitized[..max_len])
+        sanitized[..max_len].to_string()
     } else {
-        format!("{}", sanitized)
+        sanitized.to_string()
     }
 }
