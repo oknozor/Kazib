@@ -242,7 +242,6 @@ fn IdentifiersComponent(identifiers: Identifiers) -> Element {
     }
 }
 
-#[server]
 #[get("/book-details?md5")]
 async fn get_book_details(md5: String) -> Result<ItemDetails> {
     use crate::CLIENT;

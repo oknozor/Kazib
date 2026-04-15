@@ -445,7 +445,6 @@ pub async fn update_history_metadata(
     Ok(entry)
 }
 
-#[server]
 #[get("/api/download-history")]
 async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
     use crate::DATABASE;
@@ -453,7 +452,6 @@ async fn get_download_history() -> Result<Vec<DownloadHistoryEntry>> {
     DownloadHistoryEntry::get_all(&db).map_err(CapturedError::from_display)
 }
 
-#[server]
 #[delete("/api/delete-history?md5&delete_file")]
 async fn delete_history_entry(md5: String, delete_file: bool) -> Result<()> {
     use crate::DATABASE;

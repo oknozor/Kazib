@@ -140,7 +140,6 @@ pub fn Settings() -> Element {
     }
 }
 
-#[server]
 #[post("/save-settings")]
 async fn save_settings(settings: AppSettings) -> Result<()> {
     use crate::{CLIENT, DATABASE};
