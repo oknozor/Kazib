@@ -19,6 +19,7 @@ pub struct SearchOptions {
     pub query: String,
     pub page: Option<u32>,
     pub lang: Option<Lang>,
+    pub ext_filters: Vec<String>, // e.g., ["pdf", "epub", "anti_mobi"]
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ impl SearchOptions {
             query: query.into(),
             page: None,
             lang: None,
+            ext_filters: Vec::new(),
         }
     }
 
@@ -64,6 +66,11 @@ impl SearchOptions {
 
     pub fn with_lang(mut self, lang: Lang) -> Self {
         self.lang = Some(lang);
+        self
+    }
+
+    pub fn with_ext_filters(mut self, filters: Vec<String>) -> Self {
+        self.ext_filters = filters;
         self
     }
 }

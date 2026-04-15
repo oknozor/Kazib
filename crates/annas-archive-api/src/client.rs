@@ -123,6 +123,11 @@ impl AnnasArchiveClient {
             path = format!("{}&lang={}", path, lang);
         }
 
+        // Add format filters (ext=pdf&ext=epub or ext=anti_mobi)
+        for filter in &options.ext_filters {
+            path = format!("{}&ext={}", path, urlencoding::encode(filter));
+        }
+
         let html = self.fetch_with_failover(&path).await?;
         let (results, has_more) = parse_search_results(&html)?;
 

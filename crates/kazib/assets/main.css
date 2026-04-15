@@ -62,19 +62,49 @@ input {
 }
 
 /* =========================
-   Search Page
+   Search Page Layout
    ========================= */
 
-.search-controls {
-    max-width: 800px;
-    margin: 2rem auto;
+.search-page {
     display: flex;
-    gap: 0.75rem;
-    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.search-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.search-sidebar > h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.search-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-controls {
+    margin-bottom: 2rem;
 }
 
 #search-input {
-    flex: 1;
+    width: 100%;
     padding: 0.75rem 1rem;
     font-size: 1rem;
     border: 2px solid #ddd;
@@ -87,16 +117,38 @@ input {
     border-color: #0066cc;
 }
 
+/* =========================
+   Sidebar Filters
+   ========================= */
+
+.filter-section {
+    margin-bottom: 2rem;
+}
+
+.filter-section:last-child {
+    margin-bottom: 0;
+}
+
+.filter-section label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 #lang-select {
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
+    width: 100%;
+    padding: 0.625rem;
+    font-size: 0.9rem;
     border: 2px solid #ddd;
     border-radius: 4px;
     background-color: #fff;
     color: #333;
     font-family: inherit;
     cursor: pointer;
-    min-width: 150px;
     transition: border-color 0.2s;
 }
 
@@ -109,9 +161,57 @@ input {
     border-color: #999;
 }
 
+.format-filter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.format-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #666;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    width: 100%;
+}
+
+.format-checkbox:hover {
+    border-color: #0066cc;
+    background-color: #f8f9fa;
+}
+
+.format-checkbox.include {
+    border-color: #28a745;
+    background-color: #e6f4ea;
+    color: #28a745;
+}
+
+.format-checkbox.exclude {
+    border-color: #dc3545;
+    background-color: #fbe9eb;
+    color: #dc3545;
+}
+
+.format-name {
+    font-weight: 600;
+}
+
+.format-symbol {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: auto;
+}
+
 .search-result-container {
-    max-width: 800px;
-    margin: 0 auto 1rem;
+    margin-bottom: 1rem;
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
