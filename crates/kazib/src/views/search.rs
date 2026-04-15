@@ -150,11 +150,17 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
             div { class: "search-result-actions",
 
                 match download_state() {
-                    Some(DownloadProgress::Started { .. }) => rsx! {
-                        button { class: "download-button downloading", disabled: true, "Starting..." }
+                    Some(DownloadProgress::Started) => rsx! {
+                        button { class: "download-button downloading", disabled: true,
+                            span { class: "spinner" }
+                            "Starting..."
+                        }
                     },
                     Some(DownloadProgress::Progress { percent, .. }) => rsx! {
-                        button { class: "download-button downloading", disabled: true, "Downloading {percent:.0}%" }
+                        button { class: "download-button downloading", disabled: true,
+                            span { class: "spinner" }
+                            "Downloading {percent:.0}%"
+                        }
                     },
                     Some(DownloadProgress::Completed { .. }) => rsx! {
                         button { class: "download-button completed", disabled: true, "✓ Downloaded" }

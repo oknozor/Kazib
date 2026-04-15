@@ -120,10 +120,7 @@ impl Default for AppSettings {
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub enum DownloadProgress {
-    Started {
-        md5: String,
-        title: String,
-    },
+    Started,
     Progress {
         md5: String,
         downloaded: u64,
@@ -165,21 +162,16 @@ async fn download_book(
     md5: String,
     options: WebSocketOptions,
 ) -> Result<Websocket<(), DownloadProgress>> {
-    let item_details = {
-        let client = CLIENT.read().unwrap();
-        client.get_details(&md5).await.unwrap()
-    };
-
     Ok(options.on_upgrade(move |mut socket| async move {
+        let _ = socket.send(DownloadProgress::Started).await;
+
+        let item_details = {
+            let client = CLIENT.read().unwrap();
+            client.get_details(&md5).await.unwrap()
+        };
+
         let md5 = item_details.md5.clone();
         let title = item_details.title.clone();
-
-        let _ = socket
-            .send(DownloadProgress::Started {
-                md5: md5.clone(),
-                title: title.clone(),
-            })
-            .await;
 
         let db = DATABASE.clone();
         let Ok(settings) = AppSettings::get(&db) else {
