@@ -1,20 +1,20 @@
 [package]
 name = "kazib"
 version = "0.1.0"
-authors = ["Paul Delafosse <paul.delafosse@protonmail.com>"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-dioxus = { version = "0.7.4", features = ["router", "fullstack"] }
-annas-archive-api = { path = "../annas-archive-api" }
-redb = "2.3"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-nom = "8.0"
-tokio = { version = "1.0", features = ["fs", "io-util"], optional = true }
-futures-util = { version = "0.3", optional = true }
-reqwest = { version = "0.13", features = ["stream"], optional = true }
-dirs = "6.0.0"
+dioxus.workspace = true
+annas-archive-api.workspace = true
+redb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+nom.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util"], optional = true }
+futures-util = { workspace = true, optional = true }
+reqwest = { workspace = true, features = ["stream"], optional = true }
+dirs.workspace = true
 
 [features]
 default = ["web"]

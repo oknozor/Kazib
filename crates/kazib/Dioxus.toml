@@ -19,3 +19,7 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
+[bundle]
+# Skip wasm-opt to avoid SIGABRT crashes in cross-platform Docker builds
+skip_wasm_opt = true

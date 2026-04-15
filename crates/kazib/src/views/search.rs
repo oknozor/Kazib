@@ -1,7 +1,7 @@
 use annas_archive_api::{Lang, SearchResult};
 use dioxus::prelude::*;
 
-use crate::{download_book, DownloadProgress, Route, WebSocketOptions, Websocket};
+use crate::{DownloadProgress, Route, WebSocketOptions, Websocket, download_book};
 
 #[component]
 pub fn Search() -> Element {

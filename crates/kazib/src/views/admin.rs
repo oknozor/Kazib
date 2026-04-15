@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{get_settings, save_settings, AppSettings};
+use crate::{AppSettings, get_settings, save_settings};
 
 #[component]
 pub fn Settings() -> Element {

@@ -8,7 +8,7 @@ pub use dioxus_fullstack::{WebSocketOptions, Websocket};
 #[cfg(feature = "server")]
 use {
     annas_archive_api::{AnnasArchiveClient, SearchOptions},
-    dioxus::{fullstack::Lazy, CapturedError},
+    dioxus::{CapturedError, fullstack::Lazy},
     futures_util::StreamExt,
     redb::Database,
     std::{

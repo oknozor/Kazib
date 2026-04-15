@@ -1,10 +1,10 @@
 use nom::{
+    IResult, Parser,
     branch::alt,
     bytes::complete::{tag, take_till, take_while1},
     character::complete::char,
     combinator::opt,
     multi::many0,
-    IResult, Parser,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

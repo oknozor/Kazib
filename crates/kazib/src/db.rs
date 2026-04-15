@@ -1,5 +1,5 @@
-use crate::path_template::{PathTemplate, TemplateResult};
 use crate::AppSettings;
+use crate::path_template::{PathTemplate, TemplateResult};
 use annas_archive_api::ItemDetails;
 use redb::{Database, TableDefinition};
 use std::collections::HashMap;
@@ -74,7 +74,7 @@ impl AppSettings {
 
         let TemplateResult::Path {
             directory,
-            filename,
+            filename: _,
         } = PathTemplate::resolve(template, &metadata)
         else {
             panic!("No path template found + Please replace this panic with error handling");

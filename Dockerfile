@@ -13,7 +13,7 @@ COPY . .
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash && \
     /usr/local/cargo/bin/cargo-binstall dioxus-cli --version 0.7.4 --no-confirm
 
-RUN dx bundle --package kazib --web --release
+RUN dx bundle --package kazib --web --release --debug-symbols=false
 
 FROM chef AS runtime
 COPY --from=builder /app/target/dx/kazib/release/web/ /usr/local/app
