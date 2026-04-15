@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 
 use crate::model::{DownloadProgress, FileFormat, FilterState, Filterable};
-use crate::{Route, views::download_book};
+use crate::{
+    Route,
+    views::{download_book, get_current_user},
+};
 
 #[component]
 pub fn Search() -> Element {
@@ -383,20 +386,4 @@ async fn search(
         .await
         .map_err(CapturedError::from_display)
         .map(|response| response.results)
-}
-
-#[get("/users/me", headers: dioxus::fullstack::HeaderMap)]
-async fn get_current_user() -> Result<Option<String>> {
-    use crate::{AppSettings, DATABASE};
-    use dioxus::CapturedError;
-
-    let db = DATABASE.clone();
-    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
-
-    let username = headers
-        .get(&settings.auth_header_name)
-        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok())
-        .map(|s: &str| s.to_string());
-
-    Ok(username)
 }

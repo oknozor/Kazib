@@ -12,6 +12,22 @@ pub use book::Book;
 pub use history::History;
 pub use search::Search;
 
+#[get("/users/me", headers: dioxus_fullstack::HeaderMap)]
+pub async fn get_current_user() -> Result<Option<String>> {
+    use crate::{AppSettings, DATABASE};
+    use dioxus::CapturedError;
+
+    let db = DATABASE.clone();
+    let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
+
+    let username = headers
+        .get(&settings.auth_header_name)
+        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok())
+        .map(|s: &str| s.to_string());
+
+    Ok(username)
+}
+
 #[cfg(feature = "server")]
 use {
     crate::db::TemplateError,

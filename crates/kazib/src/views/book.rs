@@ -1,5 +1,9 @@
 use annas_archive_api::{Identifiers, ItemDetails};
+use dioxus::fullstack::{WebSocketOptions, Websocket};
 use dioxus::prelude::*;
+
+use crate::model::DownloadProgress;
+use crate::views::{download_book, get_current_user};
 
 #[component]
 pub fn Book(md5: String) -> Element {
@@ -30,6 +34,31 @@ pub fn Book(md5: String) -> Element {
 
 #[component]
 fn BookDetailsComponent(details: ItemDetails) -> Element {
+    let md5 = details.md5.clone();
+    let mut download_state = use_signal(|| None::<DownloadProgress>);
+    let mut ws_socket: Signal<Option<Websocket<(), DownloadProgress>>> = use_signal(|| None);
+
+    let handle_download = move |_| {
+        let md5 = md5.clone();
+
+        spawn(async move {
+            let username = get_current_user().await.ok().flatten();
+
+            if let Ok(socket) = download_book(md5, username, WebSocketOptions::new()).await {
+                ws_socket.set(Some(socket));
+
+                spawn(async move {
+                    let ws_socket = ws_socket.write().take();
+                    if let Some(socket) = ws_socket {
+                        while let Ok(progress) = socket.recv().await {
+                            download_state.set(Some(progress));
+                        }
+                    }
+                });
+            }
+        });
+    };
+
     rsx! {
         div { class: "book-details-container",
 
@@ -71,6 +100,38 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
 
                         if let Some(ref pages) = details.pages {
                             span { class: "metadata-item", "Pages: {pages}" }
+                        }
+                    }
+
+                    // Download button
+                    div { class: "book-download-button",
+                        match download_state() {
+                            Some(DownloadProgress::Started) => rsx! {
+                                button { class: "download-button downloading", disabled: true,
+                                    span { class: "spinner" }
+                                    "Starting..."
+                                }
+                            },
+                            Some(DownloadProgress::Progress { percent, .. }) => rsx! {
+                                button { class: "download-button downloading", disabled: true,
+                                    span { class: "spinner" }
+                                    "Downloading {percent:.0}%"
+                                }
+                            },
+                            Some(DownloadProgress::Completed { .. }) => rsx! {
+                                button { class: "download-button completed", disabled: true, "✓ Downloaded" }
+                            },
+                            Some(DownloadProgress::Error { ref error, .. }) => rsx! {
+                                button {
+                                    class: "download-button error",
+                                    title: "{error}",
+                                    onclick: handle_download,
+                                    "⚠ Retry"
+                                }
+                            },
+                            None => rsx! {
+                                button { class: "download-button", onclick: handle_download, "⬇ Download" }
+                            },
                         }
                     }
                 }
