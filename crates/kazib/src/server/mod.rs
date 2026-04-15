@@ -8,7 +8,7 @@ pub mod db;
 pub mod path_template;
 
 pub static DATABASE: Lazy<Arc<Database>> = Lazy::new(async move || {
-    let db_path = std::path::Path::new("data/kazib.db");
+    let db_path = std::path::Path::new("kazib.db");
     let db = db::init_db(db_path).map_err(CapturedError::from_display)?;
     Ok::<Arc<Database>, CapturedError>(Arc::new(db))
 });
