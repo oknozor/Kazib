@@ -1,5 +1,3 @@
-use std::fmt::{self, Display};
-
 use serde::{Deserialize, Serialize};
 use strum::{Display as StrumDisplay, EnumIter, EnumString, IntoEnumIterator};
 
@@ -19,12 +17,24 @@ pub struct SearchResult {
 pub struct SearchOptions {
     pub query: String,
     pub page: Option<u32>,
-    pub lang: Option<Lang>, // Deprecated: use lang_filters instead
-    pub ext_filters: Vec<String>, // e.g., ["pdf", "epub", "anti_mobi"]
+    pub lang: Option<Lang>,        // Deprecated: use lang_filters instead
+    pub ext_filters: Vec<String>,  // e.g., ["pdf", "epub", "anti_mobi"]
     pub lang_filters: Vec<String>, // e.g., ["en", "fr", "anti_es"]
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, StrumDisplay, EnumIter, EnumString)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    StrumDisplay,
+    EnumIter,
+    EnumString,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum Lang {
     #[strum(serialize = "English")]
@@ -64,12 +74,7 @@ impl Lang {
     }
 
     /// Primary languages shown by default
-    pub const PRIMARY: &'static [Lang] = &[
-        Lang::En,
-        Lang::Fr,
-        Lang::Es,
-        Lang::De,
-    ];
+    pub const PRIMARY: &'static [Lang] = &[Lang::En, Lang::Fr, Lang::Es, Lang::De];
 
     /// Secondary languages shown after clicking "more..."
     pub fn secondary() -> Vec<Lang> {

@@ -1,7 +1,7 @@
 use annas_archive_api::{ItemDetails, Lang};
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use std::fmt;
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 /// Trait for types that can be used in tri-state filters
 pub trait Filterable: Copy + Eq + std::hash::Hash + fmt::Display {
@@ -63,9 +63,9 @@ pub struct MissingField {
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Debug, Default)]
 pub enum FilterState {
     #[default]
-    Off,      // Not filtered
-    Include,  // Include this format (✓)
-    Exclude,  // Exclude this format (✗)
+    Off, // Not filtered
+    Include, // Include this format (✓)
+    Exclude, // Exclude this format (✗)
 }
 
 impl FilterState {
@@ -87,7 +87,9 @@ impl FilterState {
 }
 
 /// Supported file formats for filtering
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug, Display, EnumIter, EnumString)]
+#[derive(
+    Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug, Display, EnumIter, EnumString,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum FileFormat {
     #[strum(serialize = "PDF")]
