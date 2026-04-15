@@ -15,7 +15,7 @@ RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ca
 
 RUN dx bundle --package kazib --web --release --debug-symbols=false
 
-FROM debian:bookworm-slim AS runtime
+FROM debian:sid-slim AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates catatonit \
