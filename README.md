@@ -33,6 +33,7 @@ Most of the Anna's Archive API code have been taken from [RemiKalbe/annas-archiv
 
 | ![screenshot](docs/screenshots/search_screenshot.png) | ![screenshot](docs/screenshots/settings_screenshot.png) |
 |-------------------------------------|-------------------------------------|
+| ![screenshot](docs/screenshots/history_screenshot.png) |  |
 
 ## LICENSE
 
