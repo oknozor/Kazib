@@ -438,12 +438,7 @@ Libraries List */ .libraries-list {
     border-color: #0052a3;
 }
 
-Responsive
-    Styles
-    =========================
-    */
-    =======
-    .btn-add-library:disabled {
+.btn-add-library:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -554,13 +549,7 @@ Responsive
 /* =========================
    Responsive Styles
    ========================= */
-=========================
-    Responsive
-    Styles
-    =========================
-    */
-    @media
-    (max-width: 768px) {
+@media (max-width: 768px) {
     /* Global adjustments */
     body {
         padding: 0;
