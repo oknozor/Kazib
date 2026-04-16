@@ -438,7 +438,115 @@ Libraries List */ .libraries-list {
     border-color: #0052a3;
 }
 
-.btn-add-library:disabled {
+Responsive
+    Styles
+    =========================
+    */
+    =======
+    .btn-add-library:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Archive URLs List */
+.archive-urls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.archive-url-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: all 0.2s;
+}
+
+.archive-url-item:hover {
+    border-color: #0066cc;
+    background-color: #f8f9fa;
+}
+
+.archive-url {
+    color: #666;
+    font-size: 0.9rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+}
+
+.btn-remove-archive-url {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid #f44336;
+    background-color: #ffebee;
+    color: #c62828;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-remove-archive-url:hover:not(:disabled) {
+    background-color: #f44336;
+    color: #fff;
+}
+
+/* Add Archive URL Form */
+.add-archive-url-form {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.archive-url-input-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.archive-url-input-group input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.archive-url-input-group input:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.btn-add-archive-url {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid #0066cc;
+    background-color: #0066cc;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-add-archive-url:hover:not(:disabled) {
+    background-color: #0052a3;
+    border-color: #0052a3;
+}
+
+.btn-add-archive-url:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -446,8 +554,13 @@ Libraries List */ .libraries-list {
 /* =========================
    Responsive Styles
    ========================= */
-
-@media (max-width: 768px) {
+=========================
+    Responsive
+    Styles
+    =========================
+    */
+    @media
+    (max-width: 768px) {
     /* Global adjustments */
     body {
         padding: 0;
@@ -563,6 +676,19 @@ Libraries List */ .libraries-list {
         width: 100%;
     }
 
+    .archive-url-input-group {
+        flex-direction: column;
+    }
+
+    .archive-url-input-group input {
+        width: 100%;
+        flex: none;
+    }
+
+    .btn-add-archive-url {
+        width: 100%;
+    }
+
     /* Modal */
     .modal-content {
         width: 95%;
@@ -610,6 +736,22 @@ Libraries List */ .libraries-list {
 
     .btn-remove-library {
         order: 2;
+    }
+
+    /* Archive URL item in settings */
+    .archive-url-item {
+        flex-wrap: wrap;
+        padding: 0.75rem 1rem;
+    }
+
+    .archive-url {
+        width: 100%;
+        order: 2;
+        margin-top: 0.25rem;
+    }
+
+    .btn-remove-archive-url {
+        order: 1;
     }
 
     /* Download history */

@@ -1,13 +1,15 @@
 use dioxus::prelude::*;
 
+use super::get_current_user;
 use crate::AppSettings;
 use crate::model::Library;
-use super::get_current_user;
 
 #[component]
 pub fn Settings() -> Element {
     let mut api_key_input = use_signal(String::new);
     let mut auth_header_input = use_signal(|| "x-authentik-username".to_string());
+    let mut archive_urls_input = use_signal(Vec::<String>::new);
+    let mut new_archive_url = use_signal(String::new);
     let mut libraries_input = use_signal(Vec::<Library>::new);
     let mut detected_username = use_signal(|| None::<String>);
     let mut new_library_name = use_signal(String::new);
@@ -23,6 +25,7 @@ pub fn Settings() -> Element {
                         api_key_input.set(api_key);
                     }
                     auth_header_input.set(settings.auth_header_name);
+                    archive_urls_input.set(settings.archive_urls);
                     libraries_input.set(settings.libraries);
                 }
                 Err(err) => {
@@ -65,9 +68,35 @@ pub fn Settings() -> Element {
         });
     };
 
+    let add_archive_url = move |_| {
+        let url = new_archive_url().trim().to_string();
+
+        if url.is_empty() {
+            status_message.set("Error: Archive URL cannot be empty".to_string());
+            return;
+        }
+
+        if archive_urls_input().iter().any(|u| u == &url) {
+            status_message.set("Error: Archive URL already exists".to_string());
+            return;
+        }
+
+        archive_urls_input.with_mut(|urls| {
+            urls.push(url);
+        });
+        new_archive_url.set(String::new());
+    };
+
+    let mut remove_archive_url = move |url: String| {
+        archive_urls_input.with_mut(|urls| {
+            urls.retain(|u| u != &url);
+        });
+    };
+
     let mut handle_save_settings = move |_| {
         let api_key = api_key_input();
         let auth_header = auth_header_input();
+        let archive_urls = archive_urls_input();
         let libraries = libraries_input();
 
         // Validate that at least one library exists and has a non-empty path_template
@@ -78,6 +107,12 @@ pub fn Settings() -> Element {
 
         if libraries.iter().any(|lib| lib.path_template.is_empty()) {
             status_message.set("Error: Library path template cannot be empty".to_string());
+            return;
+        }
+
+        // Validate that at least one archive URL exists
+        if archive_urls.is_empty() {
+            status_message.set("Error: At least one archive URL is required".to_string());
             return;
         }
 
@@ -93,6 +128,7 @@ pub fn Settings() -> Element {
                 auth_header
             },
             libraries,
+            archive_urls,
         };
 
         spawn({
@@ -135,6 +171,47 @@ pub fn Settings() -> Element {
                         oninput: move |e| {
                             api_key_input.set(e.value());
                         },
+                    }
+                }
+
+                div { class: "settings-section",
+
+                    h2 { "Anna's Archive URLs" }
+                    p { "Configure multiple archive domain URLs for failover support" }
+                    p { class: "help-text",
+                        "Examples: annas-archive.gl, annas-archive.se, 10.0.0.1:8080"
+                    }
+
+                    div { class: "archive-urls-list",
+                        for url in archive_urls_input() {
+                            div { class: "archive-url-item",
+                                span { class: "archive-url", "{url}" }
+                                button {
+                                    class: "btn-remove-archive-url",
+                                    onclick: move |_| remove_archive_url(url.clone()),
+                                    "✕"
+                                }
+                            }
+                        }
+                    }
+
+                    div { class: "add-archive-url-form",
+                        h3 { "Add Archive URL" }
+                        div { class: "archive-url-input-group",
+                            input {
+                                r#type: "text",
+                                placeholder: "Archive URL (e.g., annas-archive.gl)",
+                                value: "{new_archive_url}",
+                                oninput: move |e| new_archive_url.set(e.value()),
+                                disabled: is_loading(),
+                            }
+                            button {
+                                class: "btn-add-archive-url",
+                                onclick: add_archive_url,
+                                disabled: is_loading() || new_archive_url().is_empty(),
+                                "+"
+                            }
+                        }
                     }
                 }
 
@@ -330,10 +407,14 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
     let db = DATABASE.clone();
     settings.save(&db).map_err(CapturedError::from_display)?;
 
-    if settings.api_key.is_some() {
-        *CLIENT.write().expect("failed to acquire write lock") =
-            AnnasArchiveClient::new("annas-archive.gl".to_string(), settings.api_key);
-    }
+    let archive_urls = if settings.archive_urls.is_empty() {
+        vec!["annas-archive.gl".to_string()]
+    } else {
+        settings.archive_urls.clone()
+    };
+
+    *CLIENT.write().expect("failed to acquire write lock") =
+        AnnasArchiveClient::new_with_domains(archive_urls, settings.api_key);
 
     Ok(())
 }

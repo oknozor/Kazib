@@ -18,7 +18,13 @@ pub static CLIENT: Lazy<Arc<RwLock<AnnasArchiveClient>>> = Lazy::new(async move 
     let db = DATABASE.clone();
     let settings = AppSettings::get(&db).map_err(CapturedError::from_display)?;
 
-    Ok::<Arc<RwLock<AnnasArchiveClient>>, CapturedError>(Arc::new(RwLock::new(
-        AnnasArchiveClient::new("annas-archive.gl".to_string(), settings.api_key),
-    )))
+    let archive_urls = if settings.archive_urls.is_empty() {
+        vec!["annas-archive.gl".to_string()]
+    } else {
+        settings.archive_urls.clone()
+    };
+
+    let client = AnnasArchiveClient::new_with_domains(archive_urls, settings.api_key);
+
+    Ok::<Arc<RwLock<AnnasArchiveClient>>, CapturedError>(Arc::new(RwLock::new(client)))
 });

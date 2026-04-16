@@ -28,6 +28,12 @@ pub struct AppSettings {
     pub auth_header_name: String,
     #[serde(default)]
     pub libraries: Vec<Library>,
+    #[serde(default = "default_archive_urls")]
+    pub archive_urls: Vec<String>,
+}
+
+fn default_archive_urls() -> Vec<String> {
+    vec!["annas-archive.gl".to_string()]
 }
 
 impl Default for AppSettings {
@@ -48,6 +54,7 @@ impl Default for AppSettings {
                 name: "Default".to_string(),
                 path_template: default_path,
             }],
+            archive_urls: vec!["annas-archive.gl".to_string()],
         }
     }
 }

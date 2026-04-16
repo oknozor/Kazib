@@ -35,6 +35,23 @@ impl AnnasArchiveClient {
         }
     }
 
+    pub fn new_with_domains(domains: Vec<String>, api_key: Option<String>) -> Self {
+        let cookie_jar = Arc::new(Jar::default());
+        let client = Client::builder()
+            .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            .cookie_provider(cookie_jar.clone())
+            .build()
+            .expect("Failed to create HTTP client");
+
+        Self {
+            client,
+            api_key,
+            cookie_jar,
+            authenticated: std::sync::atomic::AtomicBool::new(false),
+            domains,
+        }
+    }
+
     pub fn add_domain(&mut self, domain: String) {
         self.domains.push(domain);
     }
