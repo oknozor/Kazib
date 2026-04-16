@@ -7,6 +7,7 @@ use dioxus_fullstack::{WebSocketOptions, Websocket};
 
 mod admin;
 mod book;
+mod download;
 mod history;
 mod search;
 
