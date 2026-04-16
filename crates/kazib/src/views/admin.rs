@@ -12,6 +12,7 @@ pub fn Settings() -> Element {
     let mut new_archive_url = use_signal(String::new);
     let mut libraries_input = use_signal(Vec::<Library>::new);
     let mut detected_username = use_signal(|| None::<String>);
+    let mut file_permissions_input = use_signal(|| "755".to_string());
     let mut new_library_name = use_signal(String::new);
     let mut new_library_path_template = use_signal(String::new);
     let mut status_message = use_signal(String::new);
@@ -26,6 +27,7 @@ pub fn Settings() -> Element {
                     }
                     auth_header_input.set(settings.auth_header_name);
                     archive_urls_input.set(settings.archive_urls);
+                    file_permissions_input.set(format!("{:o}", settings.file_permissions));
                     libraries_input.set(settings.libraries);
                 }
                 Err(err) => {
@@ -98,6 +100,7 @@ pub fn Settings() -> Element {
         let auth_header = auth_header_input();
         let archive_urls = archive_urls_input();
         let libraries = libraries_input();
+        let perms_str = file_permissions_input();
 
         // Validate that at least one library exists and has a non-empty path_template
         if libraries.is_empty() {
@@ -116,6 +119,15 @@ pub fn Settings() -> Element {
             return;
         }
 
+        // Parse octal permissions
+        let file_permissions = match u32::from_str_radix(&perms_str, 8) {
+            Ok(p) if p <= 0o777 => p,
+            _ => {
+                status_message.set("Error: Invalid file permissions (use octal, e.g. 755)".to_string());
+                return;
+            }
+        };
+
         let settings = AppSettings {
             api_key: if api_key.is_empty() {
                 None
@@ -129,6 +141,7 @@ pub fn Settings() -> Element {
             },
             libraries,
             archive_urls,
+            file_permissions,
         };
 
         spawn({
@@ -241,6 +254,23 @@ pub fn Settings() -> Element {
                         None => rsx! {
                             p { class: "help-text", "No username detected" }
                         },
+                    }
+                }
+
+                div { class: "settings-section",
+
+                    h2 { "File Permissions" }
+                    p { "Unix file permissions for downloaded books (octal notation)" }
+                    p { class: "help-text",
+                        "Examples: 755 (rwxr-xr-x), 644 (rw-r--r--), 600 (rw-------)"
+                    }
+
+                    input {
+                        r#type: "text",
+                        placeholder: "755",
+                        value: "{file_permissions_input}",
+                        oninput: move |e| file_permissions_input.set(e.value()),
+                        disabled: is_loading(),
                     }
                 }
 

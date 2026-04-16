@@ -30,10 +30,16 @@ pub struct AppSettings {
     pub libraries: Vec<Library>,
     #[serde(default = "default_archive_urls")]
     pub archive_urls: Vec<String>,
+    #[serde(default = "default_file_permissions")]
+    pub file_permissions: u32,
 }
 
 fn default_archive_urls() -> Vec<String> {
     vec!["annas-archive.gl".to_string()]
+}
+
+fn default_file_permissions() -> u32 {
+    0o755
 }
 
 impl Default for AppSettings {
@@ -55,6 +61,7 @@ impl Default for AppSettings {
                 path_template: default_path,
             }],
             archive_urls: vec!["annas-archive.gl".to_string()],
+            file_permissions: default_file_permissions(),
         }
     }
 }

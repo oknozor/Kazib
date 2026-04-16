@@ -288,6 +288,15 @@ async fn download_book(
             return;
         }
 
+        // Set file permissions
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(settings.file_permissions);
+            if let Err(e) = tokio::fs::set_permissions(&file_path, perms).await {
+                eprintln!("Failed to set file permissions: {}", e);
+            }
+        }
+
         // Determine final status
         let final_status = history_status.unwrap_or_else(|| HistoryStatus::Success {
             resolved_path: file_path.to_string_lossy().to_string(),
