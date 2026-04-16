@@ -2,12 +2,14 @@ use dioxus::prelude::*;
 
 use crate::AppSettings;
 use crate::model::Library;
+use super::get_current_user;
 
 #[component]
 pub fn Settings() -> Element {
     let mut api_key_input = use_signal(String::new);
     let mut auth_header_input = use_signal(|| "x-authentik-username".to_string());
     let mut libraries_input = use_signal(Vec::<Library>::new);
+    let mut detected_username = use_signal(|| None::<String>);
     let mut new_library_name = use_signal(String::new);
     let mut new_library_path_template = use_signal(String::new);
     let mut status_message = use_signal(String::new);
@@ -26,6 +28,9 @@ pub fn Settings() -> Element {
                 Err(err) => {
                     status_message.set(format!("Error loading settings: {}", err));
                 }
+            }
+            if let Ok(username) = get_current_user().await {
+                detected_username.set(username);
             }
         });
     });
@@ -147,6 +152,18 @@ pub fn Settings() -> Element {
                         value: "{auth_header_input}",
                         oninput: move |e| auth_header_input.set(e.value()),
                         disabled: is_loading(),
+                    }
+
+                    match detected_username() {
+                        Some(username) => rsx! {
+                            p { class: "help-text",
+                                "Detected username: "
+                                strong { "{username}" }
+                            }
+                        },
+                        None => rsx! {
+                            p { class: "help-text", "No username detected" }
+                        },
                     }
                 }
 
