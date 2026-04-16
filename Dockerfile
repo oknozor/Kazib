@@ -25,9 +25,11 @@ COPY --from=builder --chown=root:root --chmod=755 \
      /app/target/dx/kazib/release/web/ /app
 
 RUN mkdir -p /app/data && chown 65534:65534 /app/data
+VOLUME /app/data
 
 ENV PORT=8080 \
-    IP=0.0.0.0
+    IP=0.0.0.0 \
+    KAZIB_DATA_DIR=/app/data
 
 EXPOSE 8080
 WORKDIR /app
