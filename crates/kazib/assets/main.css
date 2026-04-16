@@ -321,6 +321,24 @@
     border-color: #0052a3;
 }
 
+/* Search button */
+.btn-search {
+    padding: 0.75rem 1.25rem;
+    background-color: #0066cc;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-search:hover:not(:disabled) {
+    background-color: #0052a3;
+}
+
 /* Filter modal for mobile */
 .filter-modal {
     max-width: 500px;
@@ -1399,8 +1417,8 @@ input {
     display: inline-block;
     width: 14px;
     height: 14px;
-    border: 2px solid rgba(0, 102, 204, 0.3);
-    border-top-color: #0066cc;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin-right: 0.5rem;

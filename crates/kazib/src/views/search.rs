@@ -16,6 +16,8 @@ fn FilterModal(
     on_format_change: EventHandler<FileFormat>,
     on_content_type_change: EventHandler<ContentType>,
     on_close: EventHandler<()>,
+    on_search: EventHandler<()>,
+    is_searching: bool,
 ) -> Element {
     rsx! {
         div { class: "modal-overlay", onclick: move |_| on_close.call(()),
@@ -43,6 +45,19 @@ fn FilterModal(
                 }
 
                 div { class: "modal-actions",
+                    button {
+                        class: "btn-save",
+                        disabled: is_searching,
+                        onclick: move |_| {
+                            on_search.call(());
+                            on_close.call(());
+                        },
+                        if is_searching {
+                            span { class: "spinner" }
+                        } else {
+                            "Apply & Search"
+                        }
+                    }
                     button {
                         class: "btn-cancel",
                         onclick: move |_| on_close.call(()),
@@ -106,7 +121,10 @@ pub fn Search() -> Element {
     };
 
     let oninput = move |value: String| {
-        input.set(value.clone());
+        input.set(value);
+    };
+
+    let on_search = move || {
         trigger_search();
     };
 
@@ -115,7 +133,6 @@ pub fn Search() -> Element {
             let current_state = filters.get(&format).copied().unwrap_or(FilterState::Off);
             filters.insert(format, current_state.cycle());
         });
-        trigger_search();
     };
 
     let on_lang_change = move |lang: Lang| {
@@ -123,7 +140,6 @@ pub fn Search() -> Element {
             let current_state = filters.get(&lang).copied().unwrap_or(FilterState::Off);
             filters.insert(lang, current_state.cycle());
         });
-        trigger_search();
     };
 
     let on_content_type_change = move |content_type: ContentType| {
@@ -134,7 +150,6 @@ pub fn Search() -> Element {
                 .unwrap_or(FilterState::Off);
             filters.insert(content_type, current_state.cycle());
         });
-        trigger_search();
     };
 
     let toggle_filter_modal = {
@@ -190,6 +205,8 @@ pub fn Search() -> Element {
                     oninput,
                     show_filter_button: true,
                     on_filter_click: toggle_filter_modal,
+                    on_search,
+                    is_searching: search_results.pending(),
                 }
                 {results}
             }
@@ -204,6 +221,8 @@ pub fn Search() -> Element {
                     on_format_change,
                     on_content_type_change,
                     on_close: close_filter_modal,
+                    on_search,
+                    is_searching: search_results.pending(),
                 }
             }
         }
@@ -234,6 +253,8 @@ pub fn SearchInputComponent(
     oninput: EventHandler<String>,
     show_filter_button: bool,
     on_filter_click: EventHandler<()>,
+    on_search: EventHandler<()>,
+    is_searching: bool,
 ) -> Element {
     rsx! {
         div { class: "search-controls",
@@ -242,6 +263,16 @@ pub fn SearchInputComponent(
                 r#type: "search",
                 placeholder: "Search...",
                 oninput: move |e| oninput.call(e.value()),
+            }
+            button {
+                class: "btn-search",
+                disabled: is_searching,
+                onclick: move |_| on_search.call(()),
+                if is_searching {
+                    span { class: "spinner" }
+                } else {
+                    "Search"
+                }
             }
             if show_filter_button {
                 button {
