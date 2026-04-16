@@ -303,6 +303,7 @@
 
 /* Filter toggle button for mobile */
 .btn-filter-toggle {
+    display: none;
     padding: 0.75rem 1.25rem;
     border: 2px solid #0066cc;
     background-color: #0066cc;
@@ -570,6 +571,10 @@ Libraries List */ .libraries-list {
 
     .search-sidebar {
         display: none;
+    }
+
+    .btn-filter-toggle {
+        display: block !important;
     }
 
     .search-main {
