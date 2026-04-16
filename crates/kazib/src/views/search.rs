@@ -602,9 +602,9 @@ async fn search(
         search_options = search_options.with_content_filters(content_filters);
     }
 
-    CLIENT
-        .read()
-        .unwrap()
+    let client = CLIENT.read().await;
+
+    client
         .search(search_options)
         .await
         .map_err(CapturedError::from_display)

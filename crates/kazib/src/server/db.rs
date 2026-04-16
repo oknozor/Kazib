@@ -1,37 +1,12 @@
-use crate::AppSettings;
+use crate::{AppSettings, server::ServerResult};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::Path;
-
-#[derive(Debug)]
-pub enum TemplateError {
-    MissingFields(Vec<MissingField>),
-    IoError(std::io::Error),
-}
-
-impl std::fmt::Display for TemplateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TemplateError::MissingFields(fields) => {
-                write!(f, "Missing template fields: {:?}", fields)
-            }
-            TemplateError::IoError(e) => write!(f, "IO error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for TemplateError {}
-
-impl From<std::io::Error> for TemplateError {
-    fn from(error: std::io::Error) -> Self {
-        TemplateError::IoError(error)
-    }
-}
 
 const SETTINGS_TABLE: TableDefinition<&str, &str> = TableDefinition::new("settings");
 const SETTINGS_KEY: &str = "settings";
 const HISTORY_TABLE: TableDefinition<&str, &str> = TableDefinition::new("download_history");
 
-pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
+pub fn init_db(path: &Path) -> ServerResult<Database> {
     std::fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(".")))?;
     let db = Database::create(path)?;
 
@@ -46,7 +21,7 @@ pub fn init_db(path: &Path) -> Result<Database, Box<dyn std::error::Error>> {
 }
 
 impl AppSettings {
-    pub fn save(&self, db: &Database) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self, db: &Database) -> ServerResult<()> {
         let write_txn = db.begin_write()?;
         {
             let settings = serde_json::to_string(&self)?;
@@ -57,7 +32,7 @@ impl AppSettings {
         Ok(())
     }
 
-    pub fn get(db: &Database) -> Result<AppSettings, Box<dyn std::error::Error>> {
+    pub fn get(db: &Database) -> ServerResult<AppSettings> {
         let read_txn = db.begin_read()?;
         let table = read_txn.open_table(SETTINGS_TABLE)?;
 
@@ -71,10 +46,10 @@ impl AppSettings {
     }
 }
 
-use crate::model::{DownloadHistoryEntry, MissingField};
+use crate::model::DownloadHistoryEntry;
 
 impl DownloadHistoryEntry {
-    pub fn save(&self, db: &Database) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self, db: &Database) -> ServerResult<()> {
         let json = serde_json::to_string(self)?;
         let write_txn = db.begin_write()?;
         {
@@ -85,7 +60,7 @@ impl DownloadHistoryEntry {
         Ok(())
     }
 
-    pub fn get(md5: &str, db: &Database) -> Result<Option<Self>, Box<dyn std::error::Error>> {
+    pub fn get(md5: &str, db: &Database) -> ServerResult<Option<Self>> {
         let read_txn = db.begin_read()?;
         let table = read_txn.open_table(HISTORY_TABLE)?;
 
@@ -98,7 +73,7 @@ impl DownloadHistoryEntry {
         }
     }
 
-    pub fn get_all(db: &Database) -> Result<Vec<Self>, Box<dyn std::error::Error>> {
+    pub fn get_all(db: &Database) -> ServerResult<Vec<Self>> {
         let read_txn = db.begin_read()?;
         let table = read_txn.open_table(HISTORY_TABLE)?;
 
@@ -115,7 +90,7 @@ impl DownloadHistoryEntry {
         Ok(entries)
     }
 
-    pub fn delete(md5: &str, db: &Database) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn delete(md5: &str, db: &Database) -> ServerResult<()> {
         let write_txn = db.begin_write()?;
         {
             let mut table = write_txn.open_table(HISTORY_TABLE)?;

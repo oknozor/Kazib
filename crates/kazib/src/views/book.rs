@@ -439,9 +439,8 @@ async fn get_book_details(md5: String) -> Result<ItemDetails> {
     use crate::server::CLIENT;
     use dioxus::CapturedError;
 
-    CLIENT
-        .read()
-        .unwrap()
+    let client = CLIENT.read().await;
+    client
         .get_details(&md5)
         .await
         .map_err(CapturedError::from_display)

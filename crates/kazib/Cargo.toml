@@ -17,11 +17,11 @@ futures-util = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["stream"], optional = true }
 dirs.workspace = true
 chrono = { workspace = true, optional = true }
-axum = { version = "0.8", optional = true }
+thiserror.workspace = true
 
 [features]
 default = ["web"]
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
-server = ["dioxus/server", "annas-archive-api/server", "dep:tokio", "dep:futures-util", "dep:reqwest", "dep:chrono", "dep:axum"]
+server = ["dioxus/server", "annas-archive-api/server", "dep:tokio", "dep:futures-util", "dep:reqwest", "dep:chrono" ]

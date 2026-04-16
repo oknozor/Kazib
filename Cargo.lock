@@ -2862,7 +2862,6 @@ name = "kazib"
 version = "0.1.0"
 dependencies = [
  "annas-archive-api",
- "axum",
  "chrono",
  "dioxus",
  "dirs",
@@ -2873,6 +2872,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
+ "thiserror 2.0.18",
  "tokio",
 ]
 

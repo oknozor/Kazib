@@ -1,3 +1,7 @@
+#[cfg(feature = "server")]
+use {crate::server::ServerResult, crate::server::errors::ServerError, std::path::PathBuf};
+
+use crate::model::DownloadProgress;
 use dioxus::prelude::*;
 use dioxus_fullstack::{WebSocketOptions, Websocket};
 
@@ -6,7 +10,6 @@ mod book;
 mod history;
 mod search;
 
-use crate::model::DownloadProgress;
 pub use admin::{Settings, get_settings};
 pub use book::Book;
 pub use history::{History, check_book_in_library};
@@ -16,9 +19,11 @@ pub use search::Search;
 fn resolve_library_path(
     library: &crate::model::Library,
     item: &annas_archive_api::ItemDetails,
-) -> Result<std::path::PathBuf, crate::server::db::TemplateError> {
-    use crate::server::db::TemplateError;
-    use crate::server::path_template::{PathTemplate, TemplateResult};
+) -> ServerResult<PathBuf> {
+    use crate::server::{
+        errors::ServerError,
+        path_template::{PathTemplate, TemplateResult},
+    };
     use std::collections::HashMap;
 
     let mut metadata = HashMap::new();
@@ -49,17 +54,17 @@ fn resolve_library_path(
             directory,
             filename,
         } => {
-            let mut path = std::path::PathBuf::from(&directory);
+            let mut path = PathBuf::from(&directory);
             path.push(filename);
             Ok(path)
         }
-        TemplateResult::MissingFields(fields) => Err(TemplateError::MissingFields(fields)),
+        TemplateResult::MissingFields(fields) => Err(ServerError::MissingTemplateFields(fields)),
     }
 }
 
 #[cfg(feature = "server")]
 pub(crate) fn extract_username(
-    headers: &axum::http::HeaderMap,
+    headers: &dioxus::fullstack::http::HeaderMap,
     header_name: &str,
 ) -> Option<String> {
     headers
@@ -101,9 +106,17 @@ async fn download_book(
 
         let _ = socket.send(DownloadProgress::Started).await;
 
-        let item_details = {
-            let client = CLIENT.read().unwrap();
-            client.get_details(&md5).await.unwrap()
+        let Ok(item_details) = ({
+            let client = CLIENT.read().await;
+            client.get_details(&md5).await
+        }) else {
+            let _ = socket
+                .send(DownloadProgress::Error {
+                    md5: md5.clone(),
+                    error: "Failed to get details".to_string(),
+                })
+                .await;
+            return;
         };
 
         let md5 = item_details.md5.clone();
@@ -152,7 +165,7 @@ async fn download_book(
                     }
                     (path, None)
                 }
-                Err(crate::server::db::TemplateError::MissingFields(fields)) => {
+                Err(ServerError::MissingTemplateFields(fields)) => {
                     // Create temp directory for pending downloads
                     let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
                     let temp_path = temp_dir.to_string_lossy().to_string();
@@ -184,12 +197,8 @@ async fn download_book(
                 }
             };
 
-        let download_info = match CLIENT
-            .read()
-            .unwrap()
-            .get_download_url(&md5, None, None)
-            .await
-        {
+        let client = CLIENT.read().await;
+        let download_info = match client.get_download_url(&md5, None, None).await {
             Ok(info) => info,
             Err(e) => {
                 let _ = socket
@@ -348,7 +357,7 @@ fn sanitize_filename(title: &str) -> String {
 #[cfg(all(test, feature = "server"))]
 mod tests {
     use super::extract_username;
-    use axum::http::HeaderMap;
+    use dioxus::fullstack::http::HeaderMap;
 
     #[test]
     fn extract_username_present() {
@@ -393,7 +402,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             "x-authentik-username",
-            axum::http::HeaderValue::from_bytes(&[0x80, 0x81]).unwrap(),
+            dioxus::fullstack::http::HeaderValue::from_bytes(&[0x80, 0x81]).unwrap(),
         );
         assert_eq!(extract_username(&headers, "x-authentik-username"), None);
     }

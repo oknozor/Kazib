@@ -443,8 +443,8 @@ async fn save_settings(settings: AppSettings) -> Result<()> {
         settings.archive_urls.clone()
     };
 
-    *CLIENT.write().expect("failed to acquire write lock") =
-        AnnasArchiveClient::new_with_domains(archive_urls, settings.api_key);
+    let mut client = CLIENT.write().await;
+    *client = AnnasArchiveClient::new_with_domains(archive_urls, settings.api_key);
 
     Ok(())
 }

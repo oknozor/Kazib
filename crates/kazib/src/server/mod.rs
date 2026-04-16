@@ -1,10 +1,13 @@
 use crate::model::AppSettings;
 use annas_archive_api::AnnasArchiveClient;
 use dioxus::{CapturedError, fullstack::Lazy};
+pub use errors::ServerResult;
 use redb::Database;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub mod db;
+pub mod errors;
 pub mod path_template;
 
 pub static DATABASE: Lazy<Arc<Database>> = Lazy::new(async move || {
