@@ -81,7 +81,7 @@ jobs:
         env:
           SHA256: ${{ needs.build.outputs.latest-sha }}
         run: |
-          VERSION="latest@${SHA256}" yq eval '.spec.values.controllers.kazib.containers.main.image.tag = strenv(VERSION)' \
+          VERSION="latest@${SHA256}" yq eval '.spec.values.controllers.app.containers.app.image.tag = strenv(VERSION)' \
             -i gitops-repo/kubernetes/apps/downloads/kazib/app/helmrelease.yaml
 
       - name: Commit & push new version
