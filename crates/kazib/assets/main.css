@@ -110,6 +110,88 @@
     border-color: #0066cc;
 }
 
+.template-reference {
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+.template-reference summary {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+}
+
+.template-reference summary:hover {
+    color: #333;
+}
+
+.template-reference-content {
+    padding: 0 0.75rem 0.75rem;
+}
+
+.template-reference-content h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #444;
+    margin: 1rem 0 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.template-reference-content h4:first-child {
+    margin-top: 0;
+}
+
+.template-reference-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.template-reference-content th {
+    text-align: left;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 2px solid #ddd;
+    color: #555;
+    font-weight: 600;
+}
+
+.template-reference-content td {
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid #eee;
+    color: #444;
+}
+
+.template-reference-content code {
+    background: #e8e8e8;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.template-examples p {
+    margin: 0.3rem 0;
+    font-size: 0.8rem;
+    color: #444;
+}
+
+.template-examples strong {
+    color: #555;
+}
+
+.template-examples code {
+    word-break: break-all;
+    white-space: normal;
+}
+
 .search-page {
     display: flex;
     gap: 2rem;

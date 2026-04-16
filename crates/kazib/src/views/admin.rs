@@ -172,7 +172,91 @@ pub fn Settings() -> Element {
                     h2 { "Libraries" }
                     p { "Define named libraries to organize downloads by category" }
                     p { class: "help-text",
-                        "Use path templates with variables like {{title}}, {{author}}, {{series}}, etc. Example: /books/{{author}}/{{title}}.{{ext}}"
+                        "Use path templates with variables and operators to control where files are saved."
+                    }
+
+                    details { class: "template-reference",
+                        summary { "Template Reference" }
+
+                        div { class: "template-reference-content",
+                            h4 { "Available Variables" }
+                            table {
+                                thead {
+                                    tr {
+                                        th { "Variable" }
+                                        th { "Description" }
+                                        th { "Availability" }
+                                    }
+                                }
+                                tbody {
+                                    tr { td { code { "title" } } td { "Book title" } td { "Always" } }
+                                    tr { td { code { "author" } } td { "Author name" } td { "Optional" } }
+                                    tr { td { code { "series" } } td { "Series name" } td { "Optional" } }
+                                    tr { td { code { "series_number" } } td { "Position in series" } td { "Optional" } }
+                                    tr { td { code { "language" } } td { "Language code (en, fr...)" } td { "Optional" } }
+                                    tr { td { code { "year" } } td { "Publication year" } td { "Optional" } }
+                                    tr { td { code { "ext" } } td { "File extension (epub, pdf...)" } td { "Optional" } }
+                                }
+                            }
+
+                            h4 { "Template Operators" }
+                            table {
+                                thead {
+                                    tr {
+                                        th { "Syntax" }
+                                        th { "Description" }
+                                        th { "Example" }
+                                    }
+                                }
+                                tbody {
+                                    tr {
+                                        td { code { "{{name}}" } }
+                                        td { "Required variable (download fails if missing)" }
+                                        td { code { "{{author}}" } " \u{2192} Tolkien" }
+                                    }
+                                    tr {
+                                        td { code { "{{name:default}}" } }
+                                        td { "Fallback value if variable is missing" }
+                                        td { code { "{{series:Standalone}}" } " \u{2192} Standalone" }
+                                    }
+                                    tr {
+                                        td { code { "{{name/}}" } }
+                                        td { "Optional path segment (skipped if missing, adds /)" }
+                                        td { code { "{{language/}}" } " \u{2192} en/ or nothing" }
+                                    }
+                                    tr {
+                                        td { code { "{{name:default/}}" } }
+                                        td { "Fallback + optional path segment" }
+                                        td { code { "{{series:_oneshots/}}" } }
+                                    }
+                                    tr {
+                                        td { code { "{{?name}}...{{/name}}" } }
+                                        td { "Conditional block (only rendered if variable exists)" }
+                                        td { code { "{{?series}}{{series}} #{{series_number}} - {{/series}}" } }
+                                    }
+                                }
+                            }
+
+                            h4 { "Examples" }
+                            div { class: "template-examples",
+                                p {
+                                    strong { "Simple: " }
+                                    code { "/books/{{author}}/{{title}}.{{ext}}" }
+                                }
+                                p {
+                                    strong { "With optional language: " }
+                                    code { "/books/{{language/}}{{author}}/{{title}}.{{ext}}" }
+                                }
+                                p {
+                                    strong { "With series prefix: " }
+                                    code { "/books/{{author}}/{{?series}}{{series}} - {{series_number}} - {{/series}}{{title}}.{{ext}}" }
+                                }
+                                p {
+                                    strong { "Complete: " }
+                                    code { "/ebooks/{{language}}/{{author}}/{{series:_oneshots}}/{{?series}}{{series}} - {{series_number}} - {{/series}}{{title}}.{{ext}}" }
+                                }
+                            }
+                        }
                     }
 
                     div { class: "libraries-list",
