@@ -1,5 +1,5 @@
 #[cfg(feature = "server")]
-use crate::server::errors::ServerError;
+use crate::server::{errors::ServerError, path_template::DownloadPath};
 use dioxus_fullstack::{WebSocketOptions, Websocket};
 
 use dioxus::prelude::*;
@@ -198,8 +198,6 @@ fn LibrarySelectorModal(
 use {
     crate::server::ServerResult,
     futures_util::StreamExt,
-    std::path::Path,
-    std::path::PathBuf,
     tokio::{fs::File, io::AsyncWriteExt},
 };
 
@@ -231,11 +229,6 @@ async fn download_book(
         };
 
         let md5 = item_details.md5.clone();
-        let title = match item_details.format.as_ref() {
-            Some(format) => format!("{}.{}", item_details.title, format.to_lowercase()),
-            None => item_details.title.clone(),
-        };
-
         let db = DATABASE.clone();
         let Ok(settings) = AppSettings::get(&db) else {
             let _ = socket
@@ -261,11 +254,11 @@ async fn download_book(
         };
 
         // Resolve the library path using the template
-        let (download_folder, history_status) =
+        let (download_path, history_status) =
             match resolve_library_path(selected_lib, &item_details) {
                 Ok(path) => {
                     // Create directory if it doesn't exist
-                    if let Err(e) = tokio::fs::create_dir_all(&path).await {
+                    if let Err(e) = tokio::fs::create_dir_all(&path.directory).await {
                         let _ = socket
                             .send(DownloadProgress::Error {
                                 md5: md5.clone(),
@@ -278,8 +271,12 @@ async fn download_book(
                 }
                 Err(ServerError::MissingTemplateFields(fields)) => {
                     // Create temp directory for pending downloads
-                    let temp_dir = std::env::temp_dir().join("kazib_pending").join(&md5);
-                    let temp_path = temp_dir.to_string_lossy().to_string();
+                    let temp_dir = std::env::temp_dir().join("kazib_pending");
+                    let temp_file = temp_dir.join(&md5);
+
+                    let temp_dir = temp_dir.to_string_lossy().to_string();
+                    let temp_path = temp_file.to_string_lossy().to_string();
+
                     if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
                         let _ = socket
                             .send(DownloadProgress::Error {
@@ -290,7 +287,10 @@ async fn download_book(
                         return;
                     }
                     (
-                        temp_dir,
+                        DownloadPath {
+                            directory: temp_dir,
+                            filename: md5.clone(),
+                        },
                         Some(HistoryStatus::Pending {
                             missing_fields: fields,
                             temp_path,
@@ -336,9 +336,7 @@ async fn download_book(
         };
 
         let total_size = response.content_length().unwrap_or(0);
-
-        let filename = sanitize_filename(&title);
-        let file_path = Path::new(&download_folder).join(&filename);
+        let file_path = download_path.full_path();
 
         let mut file = match File::create(&file_path).await {
             Ok(f) => f,
@@ -448,28 +446,10 @@ async fn download_book(
 }
 
 #[cfg(feature = "server")]
-fn sanitize_filename(title: &str) -> String {
-    let sanitized = title
-        .chars()
-        .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-            _ => c,
-        })
-        .collect::<String>();
-
-    let max_len = 200;
-    if sanitized.len() > max_len {
-        sanitized[..max_len].to_string()
-    } else {
-        sanitized.to_string()
-    }
-}
-
-#[cfg(feature = "server")]
 fn resolve_library_path(
     library: &crate::model::Library,
     item: &annas_archive_api::ItemDetails,
-) -> ServerResult<PathBuf> {
+) -> ServerResult<DownloadPath> {
     use crate::server::{
         errors::ServerError,
         path_template::{PathTemplate, TemplateResult},
@@ -500,14 +480,7 @@ fn resolve_library_path(
     }
 
     match PathTemplate::resolve(&library.path_template, &metadata) {
-        TemplateResult::Path {
-            directory,
-            filename,
-        } => {
-            let mut path = PathBuf::from(&directory);
-            path.push(filename);
-            Ok(path)
-        }
+        TemplateResult::Path(download_path) => Ok(download_path),
         TemplateResult::MissingFields(fields) => Err(ServerError::MissingTemplateFields(fields)),
     }
 }

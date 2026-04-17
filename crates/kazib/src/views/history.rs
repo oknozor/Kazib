@@ -376,8 +376,8 @@ pub async fn update_history_metadata(
     md5: String,
     updated_metadata: std::collections::HashMap<String, String>,
 ) -> Result<DownloadHistoryEntry> {
-    use crate::AppSettings;
     use crate::server::DATABASE;
+    use crate::{AppSettings, server::path_template::DownloadPath};
     use dioxus::CapturedError;
 
     use crate::server::path_template::{PathTemplate, TemplateResult};
@@ -417,10 +417,10 @@ pub async fn update_history_metadata(
     };
 
     match PathTemplate::resolve(template, &updated_metadata) {
-        TemplateResult::Path {
+        TemplateResult::Path(DownloadPath {
             directory,
             filename,
-        } => {
+        }) => {
             let new_dir = std::path::PathBuf::from(&directory);
             if let Err(e) = std::fs::create_dir_all(&new_dir) {
                 return Err(CapturedError::from_display(format!(

@@ -8,7 +8,10 @@ use nom::{
     multi::many0,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 /// Template AST node types
 #[derive(Debug, Clone)]
@@ -28,8 +31,39 @@ enum TemplateNode {
 /// Result of template resolution
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub enum TemplateResult {
-    Path { directory: String, filename: String },
+    Path(DownloadPath),
     MissingFields(Vec<MissingField>),
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct DownloadPath {
+    pub directory: String,
+    pub filename: String,
+}
+
+impl DownloadPath {
+    pub fn full_path(&self) -> PathBuf {
+        let filename = self.sanitize_filename();
+        Path::new(&self.directory).join(filename)
+    }
+
+    fn sanitize_filename(&self) -> String {
+        let sanitized = self
+            .filename
+            .chars()
+            .map(|c| match c {
+                '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+                _ => c,
+            })
+            .collect::<String>();
+
+        let max_len = 200;
+        if sanitized.len() > max_len {
+            sanitized[..max_len].to_string()
+        } else {
+            sanitized.to_string()
+        }
+    }
 }
 
 /// Path template parser using nom combinators
@@ -174,10 +208,10 @@ impl PathTemplate {
         let cleaned_path = Self::clean_path(&result);
         let (directory, filename) = Self::split_path(&cleaned_path);
 
-        TemplateResult::Path {
+        TemplateResult::Path(DownloadPath {
             directory: directory.to_string(),
             filename: filename.to_string(),
-        }
+        })
     }
 
     fn resolve_node(
@@ -285,10 +319,10 @@ mod tests {
 
     fn assert_path(template: &str, metadata: &HashMap<String, String>, expected: &str) {
         let result = PathTemplate::resolve(template, metadata);
-        let TemplateResult::Path {
+        let TemplateResult::Path(DownloadPath {
             directory,
             filename,
-        } = result
+        }) = result
         else {
             panic!("Expected a path, got {:?}", result);
         };
@@ -616,10 +650,10 @@ mod tests {
             TemplateResult::MissingFields(fields) => {
                 assert!(fields.iter().any(|f| f.variable == "series_number"));
             }
-            TemplateResult::Path {
+            TemplateResult::Path(DownloadPath {
                 directory,
                 filename,
-            } => {
+            }) => {
                 panic!(
                     "Should have missing series_number: directory={}, filename={}",
                     directory, filename
@@ -634,10 +668,10 @@ mod tests {
         let metadata = create_metadata(&[("author", "Hobb"), ("title", "Book")]);
 
         match PathTemplate::resolve(template, &metadata) {
-            TemplateResult::Path {
+            TemplateResult::Path(DownloadPath {
                 directory,
                 filename,
-            } => {
+            }) => {
                 let full_path = format!("{}\\{}", directory, filename);
                 assert!(full_path.contains("Hobb"));
                 assert!(full_path.contains("Book"));
