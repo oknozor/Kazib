@@ -123,7 +123,8 @@ pub fn Settings() -> Element {
         let file_permissions = match u32::from_str_radix(&perms_str, 8) {
             Ok(p) if p <= 0o777 => p,
             _ => {
-                status_message.set("Error: Invalid file permissions (use octal, e.g. 755)".to_string());
+                status_message
+                    .set("Error: Invalid file permissions (use octal, e.g. 755)".to_string());
                 return;
             }
         };
