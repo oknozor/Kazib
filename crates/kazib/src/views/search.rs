@@ -263,6 +263,11 @@ pub fn SearchInputComponent(
                 r#type: "search",
                 placeholder: "Search...",
                 oninput: move |e| oninput.call(e.value()),
+                onkeydown: move |e| {
+                    if e.key() == Key::Enter {
+                        on_search.call(());
+                    }
+                },
             }
             button {
                 class: "btn-search",
