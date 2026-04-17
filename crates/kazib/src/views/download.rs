@@ -410,8 +410,21 @@ async fn download_book(
         {
             use std::os::unix::fs::PermissionsExt;
             let perms = std::fs::Permissions::from_mode(settings.file_permissions);
-            if let Err(e) = tokio::fs::set_permissions(&file_path, perms).await {
+            if let Err(e) = tokio::fs::set_permissions(&file_path, perms.clone()).await {
                 eprintln!("Failed to set file permissions: {}", e);
+            }
+
+            // Recursively set permissions for parent directories
+            let mut current_path = file_path.parent();
+            while let Some(parent) = current_path {
+                if let Err(e) = tokio::fs::set_permissions(parent, perms.clone()).await {
+                    eprintln!(
+                        "Failed to set directory permissions for {}: {}",
+                        parent.display(),
+                        e
+                    );
+                }
+                current_path = parent.parent();
             }
         }
 
