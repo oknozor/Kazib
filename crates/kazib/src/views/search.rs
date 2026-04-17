@@ -164,10 +164,15 @@ pub fn Search() -> Element {
         }
     };
 
+    let search_by_author = move |author: String| {
+        input.set(author);
+        trigger_search();
+    };
+
     let results = match search_results.value() {
         Some(Ok(results)) => rsx! {
             for result in results() {
-                SearchResultComponent { result }
+                SearchResultComponent { result, on_search: search_by_author }
             }
         },
         Some(Err(err)) => rsx! {
@@ -202,6 +207,7 @@ pub fn Search() -> Element {
 
             main { class: "search-main",
                 SearchInputComponent {
+                    input_value: input(),
                     oninput,
                     show_filter_button: true,
                     on_filter_click: toggle_filter_modal,
@@ -250,6 +256,7 @@ fn build_filters<T: Filterable>(filters: &HashMap<T, FilterState>) -> Vec<String
 
 #[component]
 pub fn SearchInputComponent(
+    input_value: String,
     oninput: EventHandler<String>,
     show_filter_button: bool,
     on_filter_click: EventHandler<()>,
@@ -262,6 +269,7 @@ pub fn SearchInputComponent(
                 id: "search-input",
                 r#type: "search",
                 placeholder: "Search...",
+                value: "{input_value}",
                 oninput: move |e| oninput.call(e.value()),
                 onkeydown: move |e| {
                     if e.key() == Key::Enter {
@@ -363,7 +371,7 @@ fn FilterCheckbox<T: Filterable + 'static>(
 }
 
 #[component]
-pub fn SearchResultComponent(result: SearchResult) -> Element {
+pub fn SearchResultComponent(result: SearchResult, on_search: EventHandler<String>) -> Element {
     let md5 = result.md5.clone();
     let md5_for_check = result.md5.clone();
     let is_in_library = use_resource(move || {
@@ -389,8 +397,17 @@ pub fn SearchResultComponent(result: SearchResult) -> Element {
 
                 div { class: "search-result-content",
                     h4 { class: "search-result-title", "{result.title}" }
-                    if let Some(ref author) = result.author {
-                        p { class: "search-result-author", "{author}" }
+                    if let Some(author) = result.author.clone() {
+                        button {
+                            class: "search-result-author",
+                            onclick: move |event| {
+                                event.stop_propagation();
+                                event.prevent_default();
+
+                                on_search.call(author.clone());
+                            },
+                            "{author}"
+                        }
                     }
 
                     div { class: "search-result-metadata",
