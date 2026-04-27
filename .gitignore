@@ -2,3 +2,4 @@ target/
 kazib.db
 .idea
 .claude
+.env.secret

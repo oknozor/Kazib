@@ -296,6 +296,7 @@ impl AnnasArchiveClient {
 
 /// Parse item details from the JSON API response
 fn parse_json_details(json_str: &str, md5: &str) -> Result<ItemDetails, Error> {
+    println!("{:?}", json_str);
     // The response is a JSON string that might be double-encoded
     let json_str = json_str.trim();
     let json_str = if json_str.starts_with('"') && json_str.ends_with('"') {
@@ -641,5 +642,38 @@ fn format_filesize(bytes: u64) -> String {
         format!("{:.1}KB", bytes as f64 / KB as f64)
     } else {
         format!("{bytes}B")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::env;
+
+    use crate::{AnnasArchiveClient, SearchOptions};
+
+    #[tokio::test]
+    async fn should_search_books() {
+        dotenv::from_filename(".env.secret").ok();
+        let key = env::var("ANNAS_ARCHIVE_API_KEY").unwrap();
+        let client = AnnasArchiveClient::new("annas-archive.gl".to_string(), Some(key));
+        let result = client
+            .search(SearchOptions::new("Victor Hugo"))
+            .await
+            .unwrap();
+
+        println!("{:?}", result.results);
+    }
+
+    #[tokio::test]
+    async fn should_get_book_details() {
+        dotenv::from_filename(".env.secret").ok();
+        let key = env::var("ANNAS_ARCHIVE_API_KEY").unwrap();
+        let client = AnnasArchiveClient::new("annas-archive.gl".to_string(), Some(key));
+        let result = client
+            .get_details("b98acc50fb0b8337683628a43aca64bd")
+            .await
+            .unwrap();
+
+        println!("{:?}", result);
     }
 }
