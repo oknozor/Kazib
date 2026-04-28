@@ -208,7 +208,6 @@ fn HistoryEntry(
 fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) -> Element {
     let mut title = use_signal(|| entry.item_details.title.clone());
     let mut author = use_signal(|| entry.item_details.author.clone().unwrap_or_default());
-    let mut series = use_signal(|| entry.item_details.series.clone().unwrap_or_default());
     let mut language = use_signal(|| entry.item_details.language.clone().unwrap_or_default());
     let mut year = use_signal(|| entry.item_details.year.clone().unwrap_or_default());
     let mut ext = use_signal(|| entry.item_details.format.clone().unwrap_or_default());
@@ -229,7 +228,6 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
         let mut metadata = HashMap::new();
         metadata.insert("title".to_string(), title());
         metadata.insert("author".to_string(), author());
-        metadata.insert("series".to_string(), series());
         metadata.insert("language".to_string(), language());
         metadata.insert("year".to_string(), year());
         metadata.insert("ext".to_string(), ext());
@@ -288,20 +286,6 @@ fn EditMetadataModal(entry: DownloadHistoryEntry, on_close: EventHandler<()>) ->
                         r#type: "text",
                         value: "{author}",
                         oninput: move |e| author.set(e.value()),
-                    }
-                }
-
-                div { class: "form-group",
-                    label { class: if missing_fields.contains(&"series".to_string()) { "required" } else { "" },
-                        "Series"
-                        if missing_fields.contains(&"series".to_string()) {
-                            span { class: "required-badge", " *" }
-                        }
-                    }
-                    input {
-                        r#type: "text",
-                        value: "{series}",
-                        oninput: move |e| series.set(e.value()),
                     }
                 }
 
@@ -394,9 +378,6 @@ pub async fn update_history_metadata(
     }
     if let Some(author) = updated_metadata.get("author") {
         entry.item_details.author = Some(author.clone());
-    }
-    if let Some(series) = updated_metadata.get("series") {
-        entry.item_details.series = Some(series.clone());
     }
     if let Some(language) = updated_metadata.get("language") {
         entry.item_details.language = Some(language.clone());

@@ -171,10 +171,10 @@ fn BookDetailsComponent(details: ItemDetails) -> Element {
                     }
                 }
 
-                if let Some(ref series) = details.series {
+                if let Some(ref serie) = details.serie {
                     p {
                         strong { "Series: " }
-                        "{series}"
+                        "{serie.name} - {serie.position}  {serie.seed_count}"
                     }
                 }
             }
@@ -312,12 +312,39 @@ fn IdentifiersComponent(identifiers: Identifiers) -> Element {
 
 #[get("/book-details?md5")]
 async fn get_book_details(md5: String) -> Result<ItemDetails> {
-    use crate::server::CLIENT;
+    use crate::server::{CLIENT, OL_CLIENT};
     use dioxus::CapturedError;
 
     let client = CLIENT.read().await;
-    client
+    let mut details = client
         .get_details(&md5)
         .await
-        .map_err(CapturedError::from_display)
+        .map_err(CapturedError::from_display)?;
+
+    let ol_id = details
+        .identifiers
+        .as_ref()
+        .and_then(|identifiers| identifiers.open_library.as_ref().and_then(|ol| ol.first()));
+
+    if let Some(ol_id) = &ol_id {
+        let ol_client = OL_CLIENT.read().await;
+        let serie = ol_client.get_serie(ol_id).await;
+        match serie {
+            Ok(Some(serie)) => {
+                use annas_archive_api::Serie;
+
+                details.serie = Some(Serie {
+                    name: serie.name,
+                    position: serie.position,
+                    seed_count: serie.seed_count,
+                });
+            }
+            Err(e) => {
+                debug!("{e}");
+            }
+            _ => (),
+        }
+    }
+
+    Ok(details)
 }

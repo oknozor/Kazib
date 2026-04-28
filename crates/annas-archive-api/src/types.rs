@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display as StrumDisplay, EnumIter, EnumString, IntoEnumIterator};
 
+use crate::dtos::{DetailsDto, IdentifiersUnified, IpfsInfoDto, TorrentPath};
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SearchResult {
     pub md5: String,
@@ -233,6 +235,15 @@ pub struct IpfsInfo {
     pub from: String,
 }
 
+impl From<IpfsInfoDto> for IpfsInfo {
+    fn from(value: IpfsInfoDto) -> Self {
+        IpfsInfo {
+            cid: value.ipfs_cid.unwrap_or_default(),
+            from: value.from.unwrap_or_default(),
+        }
+    }
+}
+
 /// Download source information
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DownloadSource {
@@ -274,8 +285,6 @@ pub struct ItemDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edition: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub series: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub identifiers: Option<Identifiers>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub categories: Option<Vec<String>>,
@@ -286,10 +295,115 @@ pub struct ItemDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub download_sources: Option<Vec<DownloadSource>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub torrent_paths: Option<Vec<String>>,
+    pub torrent_paths: Option<Vec<TorrentPath>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub serie: Option<Serie>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Serie {
+    pub name: String,
+    pub position: String,
+    pub seed_count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DownloadInfo {
     pub download_url: String,
+}
+
+impl From<DetailsDto> for ItemDetails {
+    fn from(value: DetailsDto) -> Self {
+        let unified_data = value.file_unified_data;
+        let additional = value.additional;
+
+        let download_sources = additional.as_ref().map(|additional| {
+            additional
+                .download_urls
+                .iter()
+                .map(|url| DownloadSource {
+                    name: url.get(0).cloned().unwrap_or_default(),
+                    url: url.get(1).cloned().unwrap_or_default(),
+                })
+                .collect::<Vec<_>>()
+        });
+
+        let ipfs_cids = unified_data.ipfs_infos.map(|ipfs_infos| {
+            ipfs_infos
+                .into_iter()
+                .map(IpfsInfo::from)
+                .collect::<Vec<_>>()
+        });
+
+        ItemDetails {
+            md5: value
+                .id
+                .strip_prefix("md5:")
+                .expect("MD5 missing")
+                .to_string(),
+            title: unified_data.title_best,
+            author: unified_data.author_best,
+            format: unified_data.extension_best,
+            size: unified_data.filesize_best.clone().map(format_filesize),
+            size_bytes: unified_data.filesize_best,
+            language: unified_data.language_codes.first().cloned(),
+            publisher: unified_data.publisher_best,
+            year: unified_data.year_best,
+            description: unified_data.stripped_description_best,
+            cover_url: unified_data.cover_url_best,
+            content_type: unified_data.content_type_best,
+            original_filename: unified_data.original_filename_best,
+            added_date: unified_data.added_date_best,
+            pages: unified_data.pages_best,
+            edition: unified_data.edition_variant_best,
+            identifiers: unified_data.identifiers_unified.map(Into::into),
+            categories: unified_data
+                .classification_unified
+                .as_ref()
+                .and_then(|classification| classification.collection.clone()),
+            //TODO
+            subjects: unified_data
+                .classification_unified
+                .and_then(|classification| classification.collection),
+            ipfs_cids,
+            download_sources,
+            torrent_paths: additional.map(|additional| additional.torrent_paths),
+            serie: None,
+        }
+    }
+}
+
+impl From<IdentifiersUnified> for Identifiers {
+    fn from(value: IdentifiersUnified) -> Self {
+        Identifiers {
+            isbn10: value.isbn10,
+            isbn13: value.isbn13,
+            doi: value.doi,
+            asin: value.asin,
+            sha1: value.sha1.and_then(|v| v.first().cloned()),
+            sha256: value.sha256.and_then(|v| v.first().cloned()),
+            crc32: value.crc32.and_then(|v| v.first().cloned()),
+            blake2b: value.blake2b.and_then(|v| v.first().cloned()),
+            open_library: value.ol,
+            google_books: value.googlebookid,
+            goodreads: value.goodreads,
+            amazon: value.amazon,
+        }
+    }
+}
+
+fn format_filesize(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if bytes >= GB {
+        format!("{:.1}GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.1}MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.1}KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{bytes}B")
+    }
 }
