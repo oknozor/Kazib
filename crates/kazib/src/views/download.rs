@@ -458,6 +458,7 @@ async fn download_book(
     }))
 }
 
+// /books/Romans/{language}/{author}/{?series}/{series}/{series} - {series_number} - {/series}{title}.{ext}
 #[cfg(feature = "server")]
 fn resolve_library_path(
     library: &crate::model::Library,
@@ -476,10 +477,6 @@ fn resolve_library_path(
         metadata.insert("author".into(), author.clone());
     }
 
-    if let Some(series) = &item.series {
-        metadata.insert("series".into(), series.clone());
-    }
-
     if let Some(language) = &item.language {
         metadata.insert("language".into(), language.clone());
     }
@@ -490,6 +487,12 @@ fn resolve_library_path(
 
     if let Some(ext) = &item.format {
         metadata.insert("ext".into(), ext.clone());
+    }
+
+    if let Some(serie) = &item.serie {
+        metadata.insert("series".into(), serie.name.clone());
+        metadata.insert("series_number".into(), serie.position.to_string());
+        metadata.insert("series_count".into(), serie.seed_count.to_string());
     }
 
     match PathTemplate::resolve(&library.path_template, &metadata) {

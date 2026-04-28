@@ -1,5 +1,5 @@
 use crate::model::AppSettings;
-use annas_archive_api::AnnasArchiveClient;
+use annas_archive_api::{AnnasArchiveClient, OpenLibraryClient};
 use dioxus::{CapturedError, fullstack::Lazy};
 pub use errors::ServerResult;
 use redb::Database;
@@ -30,4 +30,9 @@ pub static CLIENT: Lazy<Arc<RwLock<AnnasArchiveClient>>> = Lazy::new(async move 
     let client = AnnasArchiveClient::new_with_domains(archive_urls, settings.api_key);
 
     Ok::<Arc<RwLock<AnnasArchiveClient>>, CapturedError>(Arc::new(RwLock::new(client)))
+});
+
+pub static OL_CLIENT: Lazy<Arc<RwLock<OpenLibraryClient>>> = Lazy::new(async move || {
+    let client = OpenLibraryClient::new();
+    Ok::<Arc<RwLock<OpenLibraryClient>>, CapturedError>(Arc::new(RwLock::new(client)))
 });

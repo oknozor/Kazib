@@ -2,11 +2,10 @@ use reqwest::Client;
 use reqwest::cookie::Jar;
 use std::sync::Arc;
 
+use crate::dtos::{DetailsDto, OpenLibraryDetails, OpenLibrarySerie};
 use crate::error::Error;
 use crate::scraper::parse_search_results;
-use crate::types::{
-    DownloadInfo, DownloadSource, Identifiers, IpfsInfo, ItemDetails, SearchOptions, SearchResponse,
-};
+use crate::types::{DownloadInfo, ItemDetails, SearchOptions, SearchResponse};
 
 pub struct AnnasArchiveClient {
     client: Client,
@@ -15,6 +14,46 @@ pub struct AnnasArchiveClient {
     cookie_jar: Arc<Jar>,
     domains: Vec<String>,
     authenticated: std::sync::atomic::AtomicBool,
+}
+
+pub struct OpenLibraryClient {
+    client: Client,
+}
+
+impl OpenLibraryClient {
+    pub fn new() -> Self {
+        let client = Client::builder()
+            .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            .build()
+            .expect("Failed to create HTTP client");
+
+        Self { client }
+    }
+
+    pub async fn get_serie(&self, id: &str) -> Result<Option<OpenLibrarySerie>, reqwest::Error> {
+        let url = format!("https://openlibrary.org/works/{id}.json");
+        let details: OpenLibraryDetails = self.client.get(url).send().await?.json().await?;
+
+        if let Some(series) = details.series {
+            if let Some(serie) = series.first() {
+                let id = serie
+                    .series
+                    .key
+                    .strip_prefix("/series/")
+                    .unwrap_or(&serie.series.key);
+
+                let position = serie.position.clone();
+                let url = format!("https://openlibrary.org/series/{id}.json");
+                let mut serie: OpenLibrarySerie = self.client.get(url).send().await?.json().await?;
+                serie.position = position;
+                Ok(Some(serie))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl AnnasArchiveClient {
@@ -177,12 +216,11 @@ impl AnnasArchiveClient {
 
         for domain in &self.domains {
             let url = format!("https://{domain}{path}");
-
             match self.client.get(&url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
-                        let json_str = response.text().await.map_err(Error::Network)?;
-                        return parse_json_details(&json_str, md5);
+                        let details: DetailsDto = response.json().await.map_err(Error::Network)?;
+                        return Ok(details.into());
                     } else if response.status().is_client_error() {
                         let status = response.status().as_u16();
                         if status == 403 {
@@ -195,8 +233,9 @@ impl AnnasArchiveClient {
                             if let Ok(resp) = self.client.get(&url).send().await
                                 && resp.status().is_success()
                             {
-                                let json_str = resp.text().await.map_err(Error::Network)?;
-                                return parse_json_details(&json_str, md5);
+                                let details: DetailsDto =
+                                    response.json().await.map_err(Error::Network)?;
+                                return Ok(details.into());
                             }
                         }
                         return Err(Error::Http { status });
@@ -294,362 +333,11 @@ impl AnnasArchiveClient {
     }
 }
 
-/// Parse item details from the JSON API response
-fn parse_json_details(json_str: &str, md5: &str) -> Result<ItemDetails, Error> {
-    println!("{:?}", json_str);
-    // The response is a JSON string that might be double-encoded
-    let json_str = json_str.trim();
-    let json_str = if json_str.starts_with('"') && json_str.ends_with('"') {
-        // Double-encoded JSON string, parse first to get the inner JSON
-        serde_json::from_str::<String>(json_str).map_err(|e| Error::Parse {
-            message: format!("Failed to parse outer JSON: {e}"),
-        })?
-    } else {
-        json_str.to_string()
-    };
-
-    let data: serde_json::Value = serde_json::from_str(&json_str).map_err(|e| Error::Parse {
-        message: format!("Failed to parse JSON: {e}"),
-    })?;
-
-    // Check for error response
-    if let Some(error) = data.get("error").and_then(|v| v.as_str()) {
-        return Err(Error::Api {
-            message: error.to_string(),
-        });
-    }
-
-    // Extract file_unified_data which contains the main metadata
-    let file_data = data.get("file_unified_data").ok_or_else(|| Error::Parse {
-        message: "Missing file_unified_data".to_string(),
-    })?;
-
-    let title = file_data
-        .get("title_best")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown")
-        .to_string();
-
-    let author = file_data
-        .get("author_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let format = file_data
-        .get("extension_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_uppercase());
-
-    let size_bytes = file_data.get("filesize_best").and_then(|v| v.as_u64());
-
-    let size = size_bytes.map(format_filesize);
-
-    let language = file_data
-        .get("language_codes")
-        .and_then(|v| v.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    let publisher = file_data
-        .get("publisher_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let year = file_data
-        .get("year_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let description = file_data
-        .get("stripped_description_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let cover_url = file_data
-        .get("cover_url_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let content_type = file_data
-        .get("content_type_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let original_filename = file_data
-        .get("original_filename_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let added_date = file_data
-        .get("added_date_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let pages = file_data
-        .get("pages_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let edition = file_data
-        .get("edition_varia_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let series = file_data
-        .get("series_best")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    // Parse identifiers from identifiers_unified
-    let identifiers = parse_identifiers(file_data.get("identifiers_unified"));
-
-    // Parse categories from classifications_unified
-    let categories = parse_string_list_from_object(file_data.get("classifications_unified"));
-
-    // Parse subjects (openlib_subject, etc.)
-    let subjects = parse_string_list_from_object(
-        file_data
-            .get("classifications_unified")
-            .and_then(|c| c.get("collection")),
-    )
-    .or_else(|| {
-        // Fallback to any subject-like classification
-        file_data
-            .get("classifications_unified")
-            .and_then(|c| c.as_object())
-            .and_then(|obj| {
-                obj.iter()
-                    .find(|(k, _)| k.contains("subject"))
-                    .and_then(|(_, v)| {
-                        v.as_array().map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                    })
-            })
-    });
-
-    // Parse IPFS CIDs
-    let ipfs_cids = parse_ipfs_infos(file_data.get("ipfs_infos"));
-
-    // Parse additional data for download sources and torrent paths
-    let additional = data.get("additional");
-
-    let download_sources = parse_download_sources(additional);
-    let torrent_paths = parse_torrent_paths(additional);
-
-    Ok(ItemDetails {
-        md5: md5.to_string(),
-        title,
-        author,
-        format,
-        size,
-        size_bytes,
-        language,
-        publisher,
-        year,
-        description,
-        cover_url,
-        content_type,
-        original_filename,
-        added_date,
-        pages,
-        edition,
-        series,
-        identifiers,
-        categories,
-        subjects,
-        ipfs_cids,
-        download_sources,
-        torrent_paths,
-    })
-}
-
-/// Parse identifiers from identifiers_unified object
-fn parse_identifiers(value: Option<&serde_json::Value>) -> Option<Identifiers> {
-    let obj = value?.as_object()?;
-
-    let get_string_array = |key: &str| -> Option<Vec<String>> {
-        obj.get(key).and_then(|v| {
-            v.as_array().map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(String::from))
-                    .collect()
-            })
-        })
-    };
-
-    let get_first_string = |key: &str| -> Option<String> {
-        obj.get(key)
-            .and_then(|v| v.as_array())
-            .and_then(|arr| arr.first())
-            .and_then(|v| v.as_str())
-            .map(String::from)
-    };
-
-    let identifiers = Identifiers {
-        isbn10: get_string_array("isbn10"),
-        isbn13: get_string_array("isbn13"),
-        doi: get_string_array("doi"),
-        asin: get_string_array("asin"),
-        sha1: get_first_string("sha1"),
-        sha256: get_first_string("sha256"),
-        crc32: get_first_string("crc32"),
-        blake2b: get_first_string("blake2b"),
-        open_library: get_string_array("ol"),
-        google_books: get_string_array("googlebookid"),
-        goodreads: get_string_array("goodreads"),
-        amazon: get_string_array("amazon"),
-    };
-
-    // Only return Some if at least one field is set
-    if identifiers.isbn10.is_some()
-        || identifiers.isbn13.is_some()
-        || identifiers.doi.is_some()
-        || identifiers.asin.is_some()
-        || identifiers.sha1.is_some()
-        || identifiers.sha256.is_some()
-        || identifiers.open_library.is_some()
-        || identifiers.google_books.is_some()
-    {
-        Some(identifiers)
-    } else {
-        None
-    }
-}
-
-/// Parse a list of strings from an object's values
-fn parse_string_list_from_object(value: Option<&serde_json::Value>) -> Option<Vec<String>> {
-    let obj = value?.as_object()?;
-    let mut result = Vec::new();
-
-    for (key, val) in obj {
-        // Skip certain keys that aren't useful categories
-        if key == "collection" || key.starts_with('_') {
-            continue;
-        }
-        if let Some(arr) = val.as_array() {
-            for item in arr {
-                if let Some(s) = item.as_str()
-                    && !s.is_empty()
-                    && !result.contains(&s.to_string())
-                {
-                    result.push(s.to_string());
-                }
-            }
-        }
-    }
-
-    if result.is_empty() {
-        None
-    } else {
-        Some(result)
-    }
-}
-
-/// Parse IPFS info from ipfs_infos array
-fn parse_ipfs_infos(value: Option<&serde_json::Value>) -> Option<Vec<IpfsInfo>> {
-    let arr = value?.as_array()?;
-    let infos: Vec<IpfsInfo> = arr
-        .iter()
-        .filter_map(|v| {
-            let obj = v.as_object()?;
-            let cid = obj.get("ipfs_cid")?.as_str()?.to_string();
-            let from = obj
-                .get("from")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
-                .to_string();
-            Some(IpfsInfo { cid, from })
-        })
-        .collect();
-
-    if infos.is_empty() { None } else { Some(infos) }
-}
-
-/// Parse download sources from additional data
-fn parse_download_sources(additional: Option<&serde_json::Value>) -> Option<Vec<DownloadSource>> {
-    let obj = additional?.as_object()?;
-    let mut sources = Vec::new();
-
-    // Check for direct download URLs
-    if let Some(urls) = obj.get("download_urls").and_then(|v| v.as_array()) {
-        for url in urls {
-            if let Some(url_str) = url.as_str() {
-                sources.push(DownloadSource {
-                    name: "direct".to_string(),
-                    url: url_str.to_string(),
-                });
-            }
-        }
-    }
-
-    // Check for IPFS URLs
-    if let Some(urls) = obj.get("ipfs_urls").and_then(|v| v.as_array()) {
-        for url in urls {
-            if let Some(url_str) = url.as_str() {
-                sources.push(DownloadSource {
-                    name: "ipfs".to_string(),
-                    url: url_str.to_string(),
-                });
-            }
-        }
-    }
-
-    if sources.is_empty() {
-        None
-    } else {
-        Some(sources)
-    }
-}
-
-/// Parse torrent paths from additional data
-fn parse_torrent_paths(additional: Option<&serde_json::Value>) -> Option<Vec<String>> {
-    let arr = additional?.as_object()?.get("torrent_paths")?.as_array()?;
-
-    let paths: Vec<String> = arr
-        .iter()
-        .filter_map(|v| v.as_str().map(String::from))
-        .collect();
-
-    if paths.is_empty() { None } else { Some(paths) }
-}
-
-fn format_filesize(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-    const GB: u64 = MB * 1024;
-
-    if bytes >= GB {
-        format!("{:.1}GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.1}MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.1}KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{bytes}B")
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::env;
 
-    use crate::{AnnasArchiveClient, SearchOptions};
+    use crate::{AnnasArchiveClient, OpenLibraryClient, SearchOptions};
 
     #[tokio::test]
     async fn should_search_books() {
@@ -675,5 +363,25 @@ mod test {
             .unwrap();
 
         println!("{:?}", result);
+    }
+
+    #[tokio::test]
+    async fn should_get_book_details_with_serie() {
+        dotenv::from_filename(".env.secret").ok();
+        let key = env::var("ANNAS_ARCHIVE_API_KEY").unwrap();
+        let client = AnnasArchiveClient::new("annas-archive.gl".to_string(), Some(key));
+        let result = client
+            .get_details("8efbf8e9f8b4592c7b0dbedec9c0ec05")
+            .await
+            .unwrap();
+
+        println!("{:?}", result);
+    }
+
+    #[tokio::test]
+    async fn should_get_serie_via_openlibrary() {
+        let client = OpenLibraryClient::new();
+        let serie = client.get_serie("OL82560W").await.unwrap();
+        println!("{:?}", serie)
     }
 }
